@@ -1,0 +1,26 @@
+package com.example.gamesphere.dto.request;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class BillingInfoRequest {
+
+    @NotBlank
+    private String fullName;
+
+    private String country;
+    private String city;
+
+    @Email
+    private String billingEmail;
+
+    private String taxNumber;
+}

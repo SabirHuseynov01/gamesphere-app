@@ -1,0 +1,156 @@
+package com.example.gamesphere.service;
+
+import com.example.gamesphere.dto.request.AddCartItemRequest;
+import com.example.gamesphere.dto.response.CartResponse;
+import com.example.gamesphere.entity.Cart;
+import com.example.gamesphere.entity.CartItem;
+import com.example.gamesphere.entity.Product;
+import com.example.gamesphere.entity.User;
+import com.example.gamesphere.enums.DeliveryType;
+import com.example.gamesphere.exception.BusinessException;
+import com.example.gamesphere.exception.ProductOutOfStockException;
+import com.example.gamesphere.exception.ResourceNotFoundException;
+import com.example.gamesphere.mapper.CartMapper;
+import com.example.gamesphere.repository.CartRepository;
+import com.example.gamesphere.repository.ProductRepository;
+import com.example.gamesphere.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
+
+@Service
+@RequiredArgsConstructor
+public class CartService {
+
+    private final CartRepository cartRepository;
+    private final UserRepository userRepository;
+    private final ProductRepository productRepository;
+    private final CartMapper cartMapper;
+
+    @Transactional
+    public CartResponse getCurrentUserCart() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseGet(() -> createNewCart(user));
+
+        return cartMapper.toResponse(cart);
+    }
+
+    @Transactional
+    public CartResponse addToCart(AddCartItemRequest request) {
+        Long productId = request.getProductId();
+        Integer quantity = request.getQuantity();
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        if (!product.isActive() || product.isDeleted()) {
+            throw new BusinessException("Product is not available.");
+        }
+
+        if (product.getDeliveryType() == DeliveryType.STORE_REDIRECT
+                || product.getDeliveryType() == DeliveryType.EXTERNAL_MARKET) {
+            throw new BusinessException(
+                    "Redirect offers cannot be added to cart. Continue on the external store instead.");
+        }
+
+        if (product.getStockQuantity() < quantity) {
+            throw new ProductOutOfStockException("The product is out of stock.");
+        }
+
+        String playerAccountId = resolvePlayerAccountId(product, request.getPlayerAccountId());
+
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseGet(() -> createNewCart(user));
+
+        CartItem existingItem = cart.getCartItems().stream()
+                .filter(item -> item.getProduct().getId().equals(productId))
+                .findFirst()
+                .orElse(null);
+
+        if (existingItem != null) {
+            if (!Objects.equals(existingItem.getPlayerAccountId(), playerAccountId)) {
+                throw new BusinessException(
+                        "This product is already in the cart for a different player account. "
+                                + "Remove it before changing the player account.");
+            }
+
+            int newQuantity = existingItem.getQuantity() + quantity;
+            if (product.getStockQuantity() < newQuantity) {
+                throw new ProductOutOfStockException("The requested quantity is not available.");
+            }
+            existingItem.setQuantity(newQuantity);
+        } else {
+            CartItem item = new CartItem();
+            item.setCart(cart);
+            item.setProduct(product);
+            item.setQuantity(quantity);
+            item.setPlayerAccountId(playerAccountId);
+            item.setPriceAtAddTime(product.getDiscountPrice() != null ? product.getDiscountPrice() : product.getPrice());
+            cart.getCartItems().add(item);
+        }
+
+        return cartMapper.toResponse(cartRepository.save(cart));
+    }
+
+    @Transactional
+    public CartResponse removeFromCart(Long productId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
+
+        boolean removed = cart.getCartItems().removeIf(item -> item.getProduct().getId().equals(productId));
+        if (!removed) {
+            throw new ResourceNotFoundException("Product not found in cart");
+        }
+
+        return cartMapper.toResponse(cartRepository.save(cart));
+    }
+
+    @Transactional
+    public void clearCart() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        cartRepository.deleteByUserId(user.getId());
+    }
+
+    private Cart createNewCart(User user) {
+        Cart cart = new Cart();
+        cart.setUser(user);
+        return cartRepository.save(cart);
+    }
+
+    private String resolvePlayerAccountId(Product product, String playerAccountId) {
+        String normalizedId = playerAccountId == null ? null : playerAccountId.trim();
+
+        if (normalizedId != null && normalizedId.isBlank()) {
+            normalizedId = null;
+        }
+
+        if (product.isRequiresPlayerId() && normalizedId == null) {
+            String label = product.getPlayerIdLabel() == null
+                    || product.getPlayerIdLabel().isBlank()
+                    ? "Player account ID"
+                    : product.getPlayerIdLabel();
+
+            throw new BusinessException(label + " is required for " + product.getName() + ".");
+        }
+
+        return product.isRequiresPlayerId() ? normalizedId : null;
+    }
+}
+

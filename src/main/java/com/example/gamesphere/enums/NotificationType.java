@@ -1,0 +1,15 @@
+package com.example.gamesphere.enums;
+
+public enum NotificationType {
+    ORDER_CREATED,
+    PAYMENT_SUCCESS,
+    PAYMENT_FAILED,
+    GIFT_RECEIVED,
+    GIFT_CLAIMED,
+    TOP_UP_COMPLETED,
+    TOP_UP_FAILED,
+    TOP_UP_CANCELLED,
+    TOURNAMENT_REMINDER,
+    PRODUCT_DISCOUNT,
+    ACCOUNT_SECURITY
+}

@@ -1,0 +1,58 @@
+# Gradle
+.gradle/
+build/
+out/
+bin/
+
+# Compiled Java files
+*.class
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Other editors
+.vscode/
+
+# Logs and crash files
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+secrets/
+
+# Local Spring configuration
+src/main/resources/application-local.yml
+src/main/resources/application-local.yaml
+src/main/resources/application-secret.yml
+src/main/resources/application-secret.yaml
+
+# Private certificates and keys
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+
+# Runtime file storage
+uploads/
+storage/
+tmp/
+temp/
+
+# Test reports
+test-results/
+allure-results/
+allure-report/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
