@@ -4,6 +4,7 @@ package com.example.gamesphere.repository;
 import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.enums.DeliveryType;
 import com.example.gamesphere.enums.ProductStatus;
+import com.example.gamesphere.enums.Platform;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -30,9 +31,14 @@ public interface ProductRepository extends JpaRepository<Product, Long>,
     @Query("select product from Product product where product.id = :id")
     Optional<Product> findByIdForUpdate(@Param("id") Long id);
     boolean existsBySlug(String slug);
+
+    Optional<Product> findByGameIdAndPlatformAndStoreNameIgnoreCaseAndEditionNameIgnoreCaseAndIsDeletedFalse(
+            Long gameId, Platform platform, String storeName, String editionName);
+    List<Product> findByGameIdAndIsDeletedFalse(Long gameId);
+    Optional<Product> findFirstByGameIdAndIsDeletedFalseOrderByIdAsc(Long gameId);
     List<Product> findTop10ByGenreAndIdNotAndIsActiveTrue(String genre, Long id);
-    List<Product> findByIsActiveTrueAndStockQuantityLessThanEqualAndStatus(
-            int stockQuantity, ProductStatus status);
+    List<Product> findByIsActiveTrueAndStockQuantityLessThanEqualAndStatusAndDeliveryTypeNotIn(
+            int stockQuantity, ProductStatus status, List<DeliveryType> excludedDeliveryTypes);
     List<Product> findByIsActiveTrueAndDeliveryTypeInAndLastCheckedAtBefore(
             List<DeliveryType> deliveryTypes, LocalDateTime cutoff);
 

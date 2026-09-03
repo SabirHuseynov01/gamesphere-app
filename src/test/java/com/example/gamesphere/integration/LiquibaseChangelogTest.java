@@ -37,7 +37,12 @@ class LiquibaseChangelogTest {
                             "011-add-lock-versions",
                             "012-change-review-rating-to-decimal",
                             "013-add-game-discovery-fields",
-                            "014-add-catalog-section");
+                            "014-add-catalog-section",
+                            "015-add-product-edition-name",
+                            "016-prevent-duplicate-edition-offers",
+                            "017-restore-non-stock-managed-offers",
+                            "018-add-game-reviews",
+                            "019-add-product-discount-window");
         }
     }
 }

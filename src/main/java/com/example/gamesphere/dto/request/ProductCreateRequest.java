@@ -26,7 +26,6 @@ public class ProductCreateRequest {
 
     @NotBlank
     private String name;
-
     private String editionName;
 
     private Long gameId;
@@ -48,16 +47,13 @@ public class ProductCreateRequest {
     private Platform platform;
 
     private ProductType productType;
-
     private CatalogSection catalogSection;
 
     private String genre;
     private String keyProvider;
 
-    @NotBlank
     private String storeName;
 
-    @NotBlank
     private String storeUrl;
 
     private String region;

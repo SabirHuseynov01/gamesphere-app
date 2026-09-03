@@ -1,5 +1,6 @@
 package com.example.gamesphere.service;
 
+
 import com.example.gamesphere.dto.request.ProductCreateRequest;
 import com.example.gamesphere.dto.request.ProductUpdateRequest;
 import com.example.gamesphere.dto.response.ProductResponse;
@@ -52,8 +53,7 @@ public class ProductService {
     public ProductResponse createProduct(ProductCreateRequest request) {
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        boolean adminCatalogOffer = isAdmin();
-        User seller = adminCatalogOffer ? null : getApprovedSeller(currentEmail);
+        User seller = getApprovedSeller(currentEmail);
 
         Product product = productMapper.toEntity(request);
         product.setSeller(seller);
@@ -61,7 +61,9 @@ public class ProductService {
         product.setCategories(resolveCategories(request.getCategoryIds()));
         product.setSlug(generateUniqueSlug(request.getName(), request.getPlatform().name()));
         product.setProductType(request.getProductType() != null ? request.getProductType() : ProductType.GAME);
-        product.setCatalogSection(resolveCatalogSection(request.getCatalogSection(), product.getProductType()));
+        product.setCatalogSection(request.getCatalogSection() != null
+                ? request.getCatalogSection()
+                : defaultCatalogSection(product.getProductType()));
         product.setStatus(ProductStatus.ACTIVE);
         product.setActive(true);
         applyAggregatorDefaults(product);
@@ -81,12 +83,15 @@ public class ProductService {
 
         // Ownership check
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        User seller = isAdmin() ? null : getApprovedSeller(currentEmail);
-        if (!isAdmin() && (product.getSeller() == null || !product.getSeller().getId().equals(seller.getId()))) {
+        User seller = getApprovedSeller(currentEmail);
+        if (product.getSeller() == null || !product.getSeller().getId().equals(seller.getId())) {
             throw new BusinessException("You can only update your own products.");
         }
 
         productMapper.updateEntity(product, request);
+        if (request.getCatalogSection() == null && product.getCatalogSection() == null) {
+            product.setCatalogSection(defaultCatalogSection(product.getProductType()));
+        }
         if (request.getGameId() != null || request.getGameTitle() != null) {
             product.setGame(resolveGame(request.getGameId(), request.getGameTitle(), product.getName()));
         }
@@ -143,11 +148,6 @@ public class ProductService {
         return seller;
     }
 
-    private boolean isAdmin() {
-        return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
-    }
-
     private void applyAggregatorDefaults(Product product) {
         if (product.getRegion() == null || product.getRegion().isBlank()) {
             product.setRegion("GLOBAL");
@@ -160,15 +160,18 @@ public class ProductService {
         }
     }
 
-    private CatalogSection resolveCatalogSection(CatalogSection requested, ProductType productType) {
-        if (requested != null) {
-            return requested;
-        }
+    private CatalogSection defaultCatalogSection(ProductType productType) {
+        return isTopUpType(productType) ? CatalogSection.TOP_UPS : CatalogSection.MARKETPLACE;
+    }
 
-        return switch (productType) {
-            case IN_GAME_CURRENCY, IN_GAME_ITEM, BATTLE_PASS, GIFT_CARD, SUBSCRIPTION -> CatalogSection.TOP_UPS;
-            default -> CatalogSection.MARKETPLACE;
-        };
+    private boolean isTopUpType(ProductType productType) {
+        return productType == ProductType.IN_GAME_CURRENCY
+                || productType == ProductType.IN_GAME_ITEM
+                || productType == ProductType.CURRENCY
+                || productType == ProductType.ITEM
+                || productType == ProductType.BATTLE_PASS
+                || productType == ProductType.GIFT_CARD
+                || productType == ProductType.SUBSCRIPTION;
     }
 
     private void applyDeliveryDefaults(Product product) {
@@ -183,13 +186,16 @@ public class ProductService {
                 product.setPlayerIdLabel("Player ID");
             }
 
-            if (product.getRedemptionUrl() == null || product.getRedemptionUrl().isBlank()) {
-                throw new BusinessException("Redemption URL is required for player ID top-up products.");
-            }
         }
     }
 
     private void validateDigitalOfferMetadata(Product product) {
+        if (product.getDeliveryType() == DeliveryType.STORE_REDIRECT
+                && (product.getStoreName() == null || product.getStoreName().isBlank()
+                || product.getStoreUrl() == null || product.getStoreUrl().isBlank())) {
+            throw new BusinessException("Store name and store URL are required for redirect products.");
+        }
+
         if (product.getDeliveryType() == DeliveryType.EXTERNAL_MARKET
                 && (product.getStoreUrl() == null || product.getStoreUrl().isBlank())) {
             throw new BusinessException("Store URL is required for external marketplace products.");

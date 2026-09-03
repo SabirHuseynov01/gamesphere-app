@@ -50,6 +50,21 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.success("Approved product reviews retrieved", reviews));
     }
 
+    @GetMapping("/game/{gameId}")
+    @Operation(summary = "Get game reviews", description = "Returns paginated approved reviews for a game.")
+    public ResponseEntity<ApiResponse<PageResponse<ReviewResponse>>> getGameReviews(
+            @PathVariable Long gameId, Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success("Game reviews retrieved",
+                reviewService.getGameReviews(gameId, pageable)));
+    }
+
+    @GetMapping("/game/{gameId}/approved")
+    @Operation(summary = "Get approved game reviews", description = "Returns approved reviews for a game.")
+    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getApprovedGameReviews(@PathVariable Long gameId) {
+        return ResponseEntity.ok(ApiResponse.success("Approved game reviews retrieved",
+                reviewService.getApprovedGameReviews(gameId)));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete review", description = "Deletes the current user's review.")
     @SecurityRequirement(name = "bearerAuth")

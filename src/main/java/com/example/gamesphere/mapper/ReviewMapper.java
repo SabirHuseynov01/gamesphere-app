@@ -12,10 +12,12 @@ public interface ReviewMapper {
 
     @Mapping(target = "approved", constant = "false")
     @Mapping(target = "product", ignore = true)
+    @Mapping(target = "game", ignore = true)
     @Mapping(target = "user", ignore = true)
     Review toEntity(ReviewCreateRequest request);
 
     @Mapping(target = "username", source = "user.username")
     @Mapping(target = "productId", source = "product.id")
+    @Mapping(target = "gameId", source = "game.id")
     ReviewResponse toResponse(Review review);
 }

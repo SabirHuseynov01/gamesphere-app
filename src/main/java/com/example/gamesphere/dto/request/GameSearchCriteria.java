@@ -3,6 +3,7 @@ package com.example.gamesphere.dto.request;
 import com.example.gamesphere.enums.GameAccessType;
 import com.example.gamesphere.enums.GameBrowseSort;
 import com.example.gamesphere.enums.GameGenre;
+import com.example.gamesphere.enums.GameCatalogType;
 import com.example.gamesphere.enums.Platform;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,6 +27,7 @@ public class GameSearchCriteria {
     private LocalDate releaseDateFrom;
     private LocalDate releaseDateTo;
     private GameAccessType accessType;
+    private GameCatalogType catalogType;
     private Set<GameGenre> genres;
     private Platform platform;
     private BigDecimal minOfferPrice;

@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.util.Set;
 
@@ -48,4 +49,5 @@ public class ProductUpdateRequest {
     private Integer inGameAmount;
     private Integer bonusAmount;
     private Set<Long> categoryIds;
+
 }

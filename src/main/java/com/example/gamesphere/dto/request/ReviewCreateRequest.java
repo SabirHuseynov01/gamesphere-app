@@ -12,8 +12,14 @@ import lombok.Setter;
 @AllArgsConstructor
 public class ReviewCreateRequest {
 
-    @NotNull
     private Long productId;
+
+    private Long gameId;
+
+    @AssertTrue(message = "Either gameId or productId must be provided")
+    public boolean isTargetProvided() {
+        return gameId != null || productId != null;
+    }
 
     @NotNull
     @DecimalMin("1.0")
@@ -22,6 +28,12 @@ public class ReviewCreateRequest {
 
     @NotBlank
     private String comment;
+
+    public ReviewCreateRequest(Long productId, Double rating, String comment) {
+        this.productId = productId;
+        this.rating = rating;
+        this.comment = comment;
+    }
 
     @AssertTrue(message = "Rating must use 0.5 increments")
     public boolean isRatingStepValid() {

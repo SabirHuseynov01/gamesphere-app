@@ -13,6 +13,7 @@ import com.example.gamesphere.mapper.ReviewMapper;
 import com.example.gamesphere.repository.ProductRepository;
 import com.example.gamesphere.repository.ReviewRepository;
 import com.example.gamesphere.repository.UserRepository;
+import com.example.gamesphere.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,18 +31,43 @@ public class ReviewService {
     private final ReviewMapper reviewMapper;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final GameRepository gameRepository;
 
 
     @Transactional
     public ReviewResponse createReview(ReviewCreateRequest request) {
         User user = getCurrentUser();
-        Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-        if (reviewRepository.existsByProductIdAndUserId(product.getId(), user.getId())) {
-            throw new BusinessException("You have already reviewed this product.");
+        Product product;
+        com.example.gamesphere.entity.Game game;
+
+        if (request.getGameId() != null) {
+            game = gameRepository.findById(request.getGameId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Game not found"));
+            product = request.getProductId() == null
+                    ? productRepository.findFirstByGameIdAndIsDeletedFalseOrderByIdAsc(game.getId())
+                    .orElseThrow(() -> new BusinessException("A game needs at least one offer before it can be reviewed."))
+                    : productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+            if (product.getGame() == null || !product.getGame().getId().equals(game.getId())) {
+                throw new BusinessException("Product does not belong to the selected game.");
+            }
+            if (reviewRepository.existsByGameIdAndUserId(game.getId(), user.getId())) {
+                throw new BusinessException("You have already reviewed this game.");
+            }
+        } else {
+            product = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+            game = product.getGame();
+            if (game != null && reviewRepository.existsByGameIdAndUserId(game.getId(), user.getId())) {
+                throw new BusinessException("You have already reviewed this game.");
+            }
+            if (game == null && reviewRepository.existsByProductIdAndUserId(product.getId(), user.getId())) {
+                throw new BusinessException("You have already reviewed this product.");
+            }
         }
         Review review = reviewMapper.toEntity(request);
         review.setProduct(product);
+        review.setGame(game);
         review.setUser(user);
         Review savedReview = reviewRepository.save(review);
         return reviewMapper.toResponse(savedReview);
@@ -58,6 +84,19 @@ public class ReviewService {
     @Transactional(readOnly = true)
     public List<ReviewResponse> getApprovedProductReviews(Long productId) {
         return reviewRepository.findByProductIdAndApprovedTrue(productId).stream()
+                .map(reviewMapper::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ReviewResponse> getGameReviews(Long gameId, Pageable pageable) {
+        Page<Review> reviews = reviewRepository.findPageByGameIdAndApprovedTrue(gameId, pageable);
+        return PageResponse.of(reviews.map(reviewMapper::toResponse));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getApprovedGameReviews(Long gameId) {
+        return reviewRepository.findByGameIdAndApprovedTrue(gameId).stream()
                 .map(reviewMapper::toResponse)
                 .toList();
     }

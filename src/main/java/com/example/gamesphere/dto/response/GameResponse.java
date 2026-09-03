@@ -2,6 +2,7 @@ package com.example.gamesphere.dto.response;
 
 import com.example.gamesphere.enums.GameAccessType;
 import com.example.gamesphere.enums.GameGenre;
+import com.example.gamesphere.enums.GameCatalogType;
 import com.example.gamesphere.enums.Platform;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -26,6 +27,7 @@ public class GameResponse {
     private String publisher;
     private LocalDate releaseDate;
     private GameAccessType accessType;
+    private GameCatalogType catalogType;
     private Set<GameGenre> genres;
     private Set<Platform> supportedPlatforms;
 }

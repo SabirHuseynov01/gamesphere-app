@@ -1,12 +1,13 @@
 package com.example.gamesphere.entity;
 
-import com.example.gamesphere.enums.DeliveryType;
 import com.example.gamesphere.enums.Platform;
+import com.example.gamesphere.enums.DeliveryType;
 import com.example.gamesphere.enums.ProductStatus;
 import com.example.gamesphere.enums.ProductType;
 import com.example.gamesphere.enums.CatalogSection;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -29,7 +30,6 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "edition_name")
     private String editionName;
 
     @Column(nullable = false, unique = true)
@@ -53,12 +53,34 @@ public class Product extends BaseEntity {
     private String genre;
 
     private String imageUrl;
-    private String keyProvider;
+    private String keyProvider; //Steam, GOG, Epic Games,
 
     private String storeName;
 
     @Column(length = 1000)
     private String storeUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private DeliveryType deliveryType = DeliveryType.STORE_REDIRECT;
+
+    @Column(length = 1000)
+    private String redemptionUrl;
+
+    @Builder.Default
+    private boolean requiresPlayerId = false;
+
+    private String playerIdLabel;
+
+    @Column(length = 1000)
+    private String redemptionInstructions;
+
+    private String inGameCurrencyName;
+
+    private Integer inGameAmount;
+
+    private Integer bonusAmount;
 
     @Builder.Default
     private String region = "GLOBAL";
@@ -82,9 +104,8 @@ public class Product extends BaseEntity {
     private ProductType productType = ProductType.GAME;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "catalog_section", nullable = false)
-    @Builder.Default
-    private CatalogSection catalogSection = CatalogSection.MARKETPLACE;
+    @Column(name = "catalog_section")
+    private CatalogSection catalogSection;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "product_status", nullable = false)
@@ -104,26 +125,4 @@ public class Product extends BaseEntity {
 
     @Builder.Default
     private boolean isActive = true;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private DeliveryType deliveryType = DeliveryType.STORE_REDIRECT;
-
-    @Column(length = 1000)
-    private String redemptionUrl;
-
-    @Builder.Default
-    private boolean requiresPlayerId = false;
-
-    private String playerIdLabel;
-
-    @Column(length = 1000)
-    private String redemptionInstructions;
-
-    private String inGameCurrencyName;
-
-    private Integer inGameAmount;
-
-    private Integer bonusAmount;
 }

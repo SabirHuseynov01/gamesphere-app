@@ -2,6 +2,7 @@ package com.example.gamesphere.entity;
 
 import com.example.gamesphere.enums.GameAccessType;
 import com.example.gamesphere.enums.GameGenre;
+import com.example.gamesphere.enums.GameCatalogType;
 import com.example.gamesphere.enums.Platform;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -49,6 +50,11 @@ public class Game extends BaseEntity {
     @Column(name = "access_type", nullable = false)
     @Builder.Default
     private GameAccessType accessType = GameAccessType.PAID;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "catalog_type", nullable = false)
+    @Builder.Default
+    private GameCatalogType catalogType = GameCatalogType.GAME;
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "game_genres", joinColumns = @JoinColumn(name = "game_id"))

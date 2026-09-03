@@ -2,6 +2,7 @@ package com.example.gamesphere.dto.request;
 
 import com.example.gamesphere.enums.GameAccessType;
 import com.example.gamesphere.enums.GameGenre;
+import com.example.gamesphere.enums.GameCatalogType;
 import com.example.gamesphere.enums.Platform;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -26,8 +27,8 @@ public class GameCreateRequest {
     private String developer;
     private String publisher;
     private LocalDate releaseDate;
-
     private GameAccessType accessType;
+    private GameCatalogType catalogType;
     private Set<GameGenre> genres;
     private Set<Platform> supportedPlatforms;
 }

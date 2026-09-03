@@ -3,9 +3,12 @@ package com.example.gamesphere.specification;
 import com.example.gamesphere.dto.request.ProductFilterRequest;
 import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.enums.ProductStatus;
+import com.example.gamesphere.enums.CatalogSection;
+import com.example.gamesphere.enums.ProductType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,14 +45,21 @@ public class ProductSpecification {
                 predicates.add(cb.equal(root.get("productType"), filter.getProductType()));
             }
 
-            if (filter.getEditionName() != null && !filter.getEditionName().isBlank()) {
-                predicates.add(cb.equal(
-                        cb.lower(root.get("editionName")),
-                        filter.getEditionName().toLowerCase()));
-            }
-
             if (filter.getCatalogSection() != null) {
-                predicates.add(cb.equal(root.get("catalogSection"), filter.getCatalogSection()));
+                Predicate explicitSection = cb.equal(root.get("catalogSection"), filter.getCatalogSection());
+                Predicate legacySection = cb.and(
+                        cb.isNull(root.get("catalogSection")),
+                        filter.getCatalogSection() == CatalogSection.TOP_UPS
+                                ? root.get("productType").in(
+                                ProductType.IN_GAME_CURRENCY, ProductType.IN_GAME_ITEM,
+                                ProductType.CURRENCY, ProductType.ITEM,
+                                ProductType.BATTLE_PASS, ProductType.GIFT_CARD, ProductType.SUBSCRIPTION)
+                                : cb.not(root.get("productType").in(
+                                ProductType.IN_GAME_CURRENCY, ProductType.IN_GAME_ITEM,
+                                ProductType.CURRENCY, ProductType.ITEM,
+                                ProductType.BATTLE_PASS, ProductType.GIFT_CARD, ProductType.SUBSCRIPTION))
+                );
+                predicates.add(cb.or(explicitSection, legacySection));
             }
 
             if (filter.getDeliveryType() != null) {
@@ -89,6 +99,7 @@ public class ProductSpecification {
             predicates.add(cb.equal(root.get("isActive"), true));
             predicates.add(cb.equal(root.get("isDeleted"), false));
             predicates.add(cb.notEqual(root.get("status"), ProductStatus.DELETED));
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }

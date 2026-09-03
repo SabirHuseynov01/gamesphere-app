@@ -15,6 +15,7 @@ public class ReviewResponse {
 
     private Long id;
     private Long productId;
+    private Long gameId;
     private String username;
     private Double rating;
     private String comment;

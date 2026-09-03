@@ -56,6 +56,7 @@ public class SecurityConfig {
                                 "/api/games/*/cover",
                                 "/api/categories").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/games/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/games/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST,
                                 "/api/products",
                                 "/api/products/*/images",

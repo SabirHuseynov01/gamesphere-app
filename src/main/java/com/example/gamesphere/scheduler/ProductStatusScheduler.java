@@ -1,6 +1,7 @@
 package com.example.gamesphere.scheduler;
 
 import com.example.gamesphere.entity.Product;
+import com.example.gamesphere.enums.DeliveryType;
 import com.example.gamesphere.enums.ProductStatus;
 import com.example.gamesphere.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +22,13 @@ public class ProductStatusScheduler {
     @Scheduled(fixedRate = 600_000)
     @Transactional
     public void markOutOfStockProducts() {
-        List<Product> products = productRepository.findByIsActiveTrueAndStockQuantityLessThanEqualAndStatus(
+        List<Product> products = productRepository.findByIsActiveTrueAndStockQuantityLessThanEqualAndStatusAndDeliveryTypeNotIn(
                 0,
-                ProductStatus.ACTIVE);
+                ProductStatus.ACTIVE,
+                List.of(
+                        DeliveryType.STORE_REDIRECT,
+                        DeliveryType.EXTERNAL_MARKET,
+                        DeliveryType.PLAYER_ID_TOP_UP));
 
         products.forEach(product -> product.setStatus(ProductStatus.OUT_OF_STOCK));
 

@@ -6,6 +6,7 @@ import com.example.gamesphere.entity.Game;
 import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.enums.GameBrowseSort;
 import com.example.gamesphere.enums.GameGenre;
+import com.example.gamesphere.enums.GameCatalogType;
 import com.example.gamesphere.enums.Platform;
 import com.example.gamesphere.enums.ProductStatus;
 import com.example.gamesphere.enums.ProductType;
@@ -34,8 +35,16 @@ public final class GameSpecification {
             predicates.add(cb.isFalse(root.get("isDeleted")));
 
             if (criteria == null) {
+                predicates.add(cb.equal(root.get("catalogType"), GameCatalogType.GAME));
                 applyGameSorting(root, query, cb, GameBrowseSort.ALPHABETICAL);
                 return cb.and(predicates.toArray(new Predicate[0]));
+            }
+
+            GameCatalogType catalogType = criteria.getCatalogType() == null
+                    ? GameCatalogType.GAME
+                    : criteria.getCatalogType();
+            if (catalogType != GameCatalogType.BOTH) {
+                predicates.add(cb.equal(root.get("catalogType"), catalogType));
             }
 
             addTextPredicates(root, cb, criteria, predicates);

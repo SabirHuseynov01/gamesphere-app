@@ -11,6 +11,7 @@ import com.example.gamesphere.dto.response.PageResponse;
 import com.example.gamesphere.entity.Game;
 import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.enums.GameAccessType;
+import com.example.gamesphere.enums.GameCatalogType;
 import com.example.gamesphere.enums.Platform;
 import com.example.gamesphere.exception.ResourceNotFoundException;
 import com.example.gamesphere.repository.GameRepository;
@@ -50,6 +51,7 @@ public class GameService {
         game.setPublisher(request.getPublisher());
         game.setReleaseDate(request.getReleaseDate());
         game.setAccessType(request.getAccessType() == null ? GameAccessType.PAID : request.getAccessType());
+        game.setCatalogType(request.getCatalogType() == null ? GameCatalogType.GAME : request.getCatalogType());
         replaceGenres(game, request.getGenres());
         replaceSupportedPlatforms(game, request.getSupportedPlatforms());
 
@@ -82,6 +84,9 @@ public class GameService {
         if (request.getAccessType() != null) {
             game.setAccessType(request.getAccessType());
         }
+        if (request.getCatalogType() != null) {
+            game.setCatalogType(request.getCatalogType());
+        }
         if (request.getGenres() != null) {
             replaceGenres(game, request.getGenres());
         }
@@ -90,6 +95,13 @@ public class GameService {
         }
 
         return toGameResponse(gameRepository.save(game));
+    }
+
+    @Transactional
+    public void deleteGame(Long gameId) {
+        Game game = getGame(gameId);
+        game.setDeleted(true);
+        gameRepository.save(game);
     }
 
     @Transactional
@@ -107,7 +119,7 @@ public class GameService {
 
     @Transactional(readOnly = true)
     public GameResponse getGameBySlug(String slug) {
-        Game game = gameRepository.findBySlug(slug)
+        Game game = gameRepository.findBySlugAndIsDeletedFalse(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Game not found: " + slug));
         return toGameResponse(game);
     }
@@ -117,7 +129,7 @@ public class GameService {
             String slug,
             GameOfferCriteria criteria) {
 
-        Game game = gameRepository.findBySlug(slug)
+        Game game = gameRepository.findBySlugAndIsDeletedFalse(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Game not found: " + slug));
 
         List<Product> products = gameQueryService.findOffers(game.getId(), criteria);
@@ -189,6 +201,7 @@ public class GameService {
                 game.getPublisher(),
                 game.getReleaseDate(),
                 game.getAccessType(),
+                game.getCatalogType(),
                 Set.copyOf(game.getGenres()),
                 Set.copyOf(game.getSupportedPlatforms()));
     }
@@ -207,7 +220,6 @@ public class GameService {
         GameOfferResponse response = new GameOfferResponse();
         response.setProductId(product.getId());
         response.setProductName(product.getName());
-        response.setEditionName(product.getEditionName());
         response.setProductSlug(product.getSlug());
         response.setSellerId(product.getSeller() != null ? product.getSeller().getId() : null);
         response.setStoreName(product.getStoreName());

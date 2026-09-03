@@ -29,3 +29,15 @@ databaseChangeLog:
       file: db/changelog/changes/014-add-catalog-section.sql
   - include:
       file: db/changelog/changes/015-add-product-edition-name.sql
+  - include:
+      file: db/changelog/changes/016-prevent-duplicate-edition-offers.sql
+  - include:
+      file: db/changelog/changes/017-restore-non-stock-managed-offers.sql
+  - include:
+      file: db/changelog/changes/018-add-game-reviews.sql
+  - include:
+      file: db/changelog/changes/019-add-product-discount-window.sql
+  - include:
+      file: db/changelog/changes/020-fill-product-catalog-section.sql
+  - include:
+      file: db/changelog/changes/021-add-top-up-game-catalog-and-edition-name.sql
