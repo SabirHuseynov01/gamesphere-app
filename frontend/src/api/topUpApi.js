@@ -38,12 +38,3 @@ export async function getTopUpGames(signal) {
 
     return response.data.data?.content || [];
 }
-
-export async function addTopUpToCart(productId, playerAccountId) {
-    const response = await httpClient.post("/cart/items", {
-        productId,
-        quantity: 1,
-        ...(playerAccountId ? { playerAccountId } : {}),
-    });
-    return response.data.data;
-}

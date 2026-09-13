@@ -1,17 +1,18 @@
 import {
     Gamepad2,
     Globe2,
-    Heart,
     ShoppingBag,
     Search,
-    ShoppingCart,
     Sparkles,
     Trophy,
-    UserRound,
 } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import AccountMenu from "./AccountMenu.jsx";
+import CartMenu from "./CartMenu.jsx";
+import WishlistMenu from "./WishlistMenu.jsx";
 import { useTranslation } from "../../i18n/index.jsx";
+import "../../styles/header-menus.css";
 
 export default function Header() {
     const navigate = useNavigate();
@@ -90,17 +91,9 @@ export default function Header() {
                         </select>
                     </label>
 
-                    <button className="icon-button" type="button" title={t("nav.wishlist")}>
-                        <Heart size={19} />
-                    </button>
-
-                    <button className="icon-button" type="button" title={t("nav.cart")}>
-                        <ShoppingCart size={19} />
-                    </button>
-
-                    <button className="icon-button" type="button" title={t("nav.profile")}>
-                        <UserRound size={19} />
-                    </button>
+                    <WishlistMenu />
+                    <CartMenu />
+                    <AccountMenu />
                 </div>
             </div>
         </header>

@@ -2,7 +2,8 @@ import { ArrowLeft, Gamepad2, ShoppingCart } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
-import { addTopUpToCart, getTopUpGames, getTopUpProducts } from "../api/topUpApi.js";
+import { getTopUpGames, getTopUpProducts } from "../api/topUpApi.js";
+import { useAccount } from "../account/AccountProvider.jsx";
 import { getApiErrorMessage } from "../api/httpClient.js";
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
 import { formatCurrency, formatPlatform } from "../utils/formatters.js";
@@ -12,6 +13,7 @@ import "../styles/top-ups.css";
 
 export default function TopUpDetailsPage() {
     const { t } = useTranslation();
+    const { addToCart, isAuthenticated } = useAccount();
     const { slug } = useParams();
     const { state } = useLocation();
     const [products, setProducts] = useState(state?.products || []);
@@ -70,11 +72,19 @@ export default function TopUpDetailsPage() {
     const playerIdProduct = products.find((product) => product.requiresPlayerId);
 
     async function handleBuy(product) {
-        setBuyingId(product.id);
         setMessage("");
         setError("");
+
+        // The cart endpoint is authenticated, so say that plainly instead of
+        // letting the request come back as a bare 401.
+        if (!isAuthenticated) {
+            setError(t("cart.signInFirst"));
+            return;
+        }
+
+        setBuyingId(product.id);
         try {
-            await addTopUpToCart(product.id, playerId);
+            await addToCart(product.id, playerId);
             setMessage(t("topUps.addedToCart"));
         } catch (requestError) {
             setError(getApiErrorMessage(requestError));
@@ -135,8 +145,8 @@ export default function TopUpDetailsPage() {
                             </label>
                         )}
 
-                        {message && <div className="status-panel status-panel--success">{message}</div>}
-                        {error && <div className="status-panel status-panel--error">{error}</div>}
+                        {message && <div className="status-panel status-panel--inline status-panel--success">{message}</div>}
+                        {error && <div className="status-panel status-panel--inline status-panel--error">{error}</div>}
 
                         <section className="top-up-package-grid" aria-label={`${title} ${t("common.packages")}`}>
                             {sortedProducts.map((product, index) => {

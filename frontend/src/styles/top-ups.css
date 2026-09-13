@@ -506,6 +506,26 @@
     text-align: center;
 }
 
+/* global.css is loaded after this file, so match its specificity to win. */
+.status-panel.status-panel--inline {
+    min-height: 0;
+    margin-bottom: var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    text-align: left;
+}
+
+.status-panel.status-panel--inline.status-panel--success {
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.status-panel.status-panel--inline.status-panel--error {
+    border-color: var(--color-danger);
+}
+
 .top-up-player-id {
     display: grid;
     max-width: 28rem;

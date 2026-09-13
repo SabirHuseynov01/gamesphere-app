@@ -1,7 +1,7 @@
 import { ShoppingCart, X } from "lucide-react";
 import { useState } from "react";
 
-import { addTopUpToCart } from "../../../api/topUpApi.js";
+import { useAccount } from "../../../account/AccountProvider.jsx";
 import { getApiErrorMessage } from "../../../api/httpClient.js";
 import { resolveMediaUrl } from "../../../utils/mediaUrl.js";
 import { useTranslation } from "../../../i18n/index.jsx";
@@ -12,6 +12,7 @@ function productImage(product, game) {
 
 export default function TopUpPackagesSection({ game, products }) {
     const { t } = useTranslation();
+    const { addToCart, isAuthenticated } = useAccount();
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [playerId, setPlayerId] = useState("");
     const [buyingId, setBuyingId] = useState(null);
@@ -27,11 +28,17 @@ export default function TopUpPackagesSection({ game, products }) {
 
     async function continuePurchase() {
         if (!selectedProduct) return;
-        setBuyingId(selectedProduct.id);
         setMessage("");
         setError("");
+
+        if (!isAuthenticated) {
+            setError(t("cart.signInFirst"));
+            return;
+        }
+
+        setBuyingId(selectedProduct.id);
         try {
-            await addTopUpToCart(selectedProduct.id, playerId);
+            await addToCart(selectedProduct.id, playerId);
             setMessage(t("topUps.addedToCart"));
             setSelectedProduct(null);
         } catch (requestError) {
@@ -50,8 +57,8 @@ export default function TopUpPackagesSection({ game, products }) {
                 <div><p className="game-details__eyebrow">{t("topUps.packageEyebrow")}</p><h2 id="top-up-packages-title">{t("topUps.packagesTitle")}</h2></div>
                 <span>{t("topUps.packageCount", { count: products.length })}</span>
             </div>
-            {message && <div className="status-panel status-panel--success">{message}</div>}
-            {error && <div className="status-panel status-panel--error">{error}</div>}
+            {message && <div className="status-panel status-panel--inline status-panel--success">{message}</div>}
+            {error && <div className="status-panel status-panel--inline status-panel--error">{error}</div>}
             <div className="top-up-package-grid">{products.map((product) => {
                 const imageUrl = productImage(product, game);
                 const finalPrice = product.finalPrice ?? product.discountPrice ?? product.price;

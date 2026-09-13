@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 
+import AccountPage from "../pages/AccountPage.jsx";
 import MainLayout from "../layouts/MainLayout.jsx";
 import GameDetailsPage from "../pages/GameDetailsPage.jsx";
 import BrowseGamesPage from "../pages/BrowseGamesPage.jsx";
@@ -37,6 +38,14 @@ export const router = createBrowserRouter([
             {
                 path: "/top-ups/:slug",
                 element: <TopUpDetailsPage />,
+            },
+            {
+                path: "/account",
+                element: <AccountPage />,
+            },
+            {
+                path: "/account/:section",
+                element: <AccountPage />,
             },
             {
                 path: "/tournaments",

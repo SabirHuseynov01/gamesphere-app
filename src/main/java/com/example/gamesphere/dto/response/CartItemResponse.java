@@ -17,5 +17,6 @@ public class CartItemResponse {
     private String productName;
     private int quantity;
     private BigDecimal price;
+    private String currency;
     private String playerAccountId;
 }
