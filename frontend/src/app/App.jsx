@@ -23,7 +23,6 @@ import {
     Menu,
     Monitor,
     PackageCheck,
-    Plus,
     Search,
     ShieldCheck,
     ShoppingBag,

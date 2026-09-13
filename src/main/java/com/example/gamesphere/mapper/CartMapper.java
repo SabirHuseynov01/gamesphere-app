@@ -15,12 +15,24 @@ public interface CartMapper {
     @Mapping(target = "items", source = "cartItems")
     @Mapping(target = "cartId", source = "id")
     @Mapping(target = "totalAmount", expression = "java(calculateTotal(cart))")
+    @Mapping(target = "currency", expression = "java(resolveCurrency(cart))")
     CartResponse toResponse(Cart cart);
 
     @Mapping(target = "productId", source = "product.id")
     @Mapping(target = "productName", source = "product.name")
     @Mapping(target = "price", source = "priceAtAddTime")
+    @Mapping(target = "currency", source = "product.currency")
     CartItemResponse toCartItemResponse(CartItem cartItem);
+
+    /** Currency of the cart total, taken from the first item a cart holds. */
+    default String resolveCurrency(Cart cart) {
+        if (cart.getCartItems() == null) return null;
+        return cart.getCartItems().stream()
+                .map(item -> item.getProduct().getCurrency())
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+    }
 
     default BigDecimal calculateTotal(Cart cart) {
         if (cart.getCartItems() == null) return BigDecimal.ZERO;
