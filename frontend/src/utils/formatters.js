@@ -19,6 +19,20 @@ export function formatCurrency(amount, currency = "USD", unavailableLabel = "Pri
     }
 }
 
+/**
+ * Money whose currency may be unknown. Printing a bare number beats printing
+ * the wrong symbol, which is what a hardcoded USD fallback would do.
+ */
+export function formatMoney(amount, currency, unavailableLabel = "Price unavailable") {
+    if (currency) {
+        return formatCurrency(amount, currency, unavailableLabel);
+    }
+
+    const numericAmount = Number(amount);
+
+    return Number.isFinite(numericAmount) ? numericAmount.toFixed(2) : unavailableLabel;
+}
+
 export function formatEnum(value) {
     if (!value) {
         return "Not specified";

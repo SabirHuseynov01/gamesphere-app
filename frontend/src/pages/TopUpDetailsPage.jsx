@@ -142,6 +142,7 @@ export default function TopUpDetailsPage() {
                                     value={playerId}
                                     onChange={(event) => setPlayerId(event.target.value)}
                                 />
+                                <small>{t("topUps.playerIdHint")}</small>
                             </label>
                         )}
 
