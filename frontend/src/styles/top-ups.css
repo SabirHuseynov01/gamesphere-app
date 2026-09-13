@@ -549,6 +549,11 @@
     border-color: var(--color-focus);
 }
 
+.top-up-player-id small {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+}
+
 .top-ups-empty {
     display: grid;
     min-height: 18rem;

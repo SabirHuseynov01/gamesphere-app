@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import HeaderMenu from "./HeaderMenu.jsx";
 import { useAccount } from "../../account/AccountProvider.jsx";
 import { useTranslation } from "../../i18n/index.jsx";
-import { formatCurrency } from "../../utils/formatters.js";
+import { formatMoney } from "../../utils/formatters.js";
 
 export default function CartMenu() {
     const { t } = useTranslation();
@@ -38,7 +38,7 @@ export default function CartMenu() {
                                             {item.playerAccountId && <small>{item.playerAccountId}</small>}
                                         </span>
                                         <span className="basket-menu__meta">
-                                            <strong>{formatCurrency(item.price, item.currency || cart.currency || "USD")}</strong>
+                                            <strong>{formatMoney(item.price, item.currency || cart.currency)}</strong>
                                             <small>× {item.quantity}</small>
                                         </span>
                                         <button
@@ -56,7 +56,7 @@ export default function CartMenu() {
                             <footer className="basket-menu__footer">
                                 <span>
                                     {t("cart.total")}
-                                    <strong>{formatCurrency(cart.totalAmount, cart.currency || "USD")}</strong>
+                                    <strong>{formatMoney(cart.totalAmount, cart.currency)}</strong>
                                 </span>
                                 <Link to="/account/orders" onClick={close}>{t("cart.checkout")}</Link>
                             </footer>

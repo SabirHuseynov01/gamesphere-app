@@ -8,6 +8,7 @@ import com.example.gamesphere.entity.Order;
 import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.entity.User;
 import com.example.gamesphere.enums.DeliveryType;
+import com.example.gamesphere.exception.BusinessException;
 import com.example.gamesphere.enums.OrderStatus;
 import com.example.gamesphere.repository.CartRepository;
 import com.example.gamesphere.repository.OrderRepository;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,6 +67,35 @@ class OrderProcessingServiceTest extends ServiceTestSupport {
         assertThat(order.getOrderItems()).singleElement().satisfies(orderItem ->
                 assertThat(orderItem.getQuantity()).isEqualTo(2));
         assertThat(product.getStockQuantity()).isEqualTo(8);
+    }
+
+    @Test
+    void processCartOrderRefusesATopUpThatStillHasNoPlayerAccountId() {
+        User user = user(1L, "user@mail.com");
+        Product product = new Product();
+        product.setId(6L);
+        product.setName("PUBG Mobile 8100 UC");
+        product.setPrice(new BigDecimal("99.99"));
+        product.setStockQuantity(10);
+        product.setActive(true);
+        product.setDeliveryType(DeliveryType.PLAYER_ID_TOP_UP);
+        product.setRequiresPlayerId(true);
+        product.setPlayerIdLabel("PUBG Mobile Player ID");
+
+        Cart cart = new Cart();
+        cart.setUser(user);
+        CartItem cartItem = new CartItem();
+        cartItem.setCart(cart);
+        cartItem.setProduct(product);
+        cartItem.setQuantity(1);
+        cart.getCartItems().add(cartItem);
+
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+        when(productRepository.findByIdForUpdate(6L)).thenReturn(Optional.of(product));
+
+        assertThatThrownBy(() -> orderProcessingService.processCartOrder(user))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("PUBG Mobile Player ID is required for PUBG Mobile 8100 UC.");
     }
 
     @Test
