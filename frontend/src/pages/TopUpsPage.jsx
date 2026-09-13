@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Gamepad2 } from "lucide-react";
+import { Gamepad2, Search, SlidersHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { getTopUpProducts } from "../api/topUpApi.js";
+import { getTopUpGames, getTopUpProducts } from "../api/topUpApi.js";
 import { getApiErrorMessage } from "../api/httpClient.js";
 import { useTranslation } from "../i18n/index.jsx";
+import { formatCurrency, formatPlatform } from "../utils/formatters.js";
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
+import { cheapestProduct, packageSummary, sortByPrice, toSlug } from "../utils/topUps.js";
 import "../styles/top-ups.css";
 
-function toSlug(value) {
-    return value
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-}
+const PREVIEW_PACKAGE_COUNT = 3;
 
 function categoryForProduct(product) {
     if (product.productType === "GIFT_CARD") return "GIFT_CARD";
@@ -23,12 +19,24 @@ function categoryForProduct(product) {
     return "GAME_TOP_UPS";
 }
 
+const sorters = {
+    ALPHABETICAL: (a, b) => a.title.localeCompare(b.title),
+    PRICE_LOW: (a, b) => Number(a.fromPrice ?? 0) - Number(b.fromPrice ?? 0),
+    PRICE_HIGH: (a, b) => Number(b.fromPrice ?? 0) - Number(a.fromPrice ?? 0),
+    PACKAGES: (a, b) => b.products.length - a.products.length,
+};
+
 export default function TopUpsPage() {
     const { t } = useTranslation();
     const [products, setProducts] = useState([]);
+    const [gamesById, setGamesById] = useState(new Map());
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [category, setCategory] = useState("ALL");
+    const [query, setQuery] = useState("");
+    const [platform, setPlatform] = useState("ALL");
+    const [sortBy, setSortBy] = useState("ALPHABETICAL");
+
     const categoryLabels = {
         ALL: t("topUps.categories.all"),
         GAME_TOP_UPS: t("topUps.categories.game"),
@@ -40,47 +48,71 @@ export default function TopUpsPage() {
     useEffect(() => {
         const controller = new AbortController();
 
-        getTopUpProducts(controller.signal)
-            .then(setProducts)
-            .catch((requestError) => {
-                if (requestError.name !== "CanceledError") {
-                    setError(getApiErrorMessage(requestError));
+        Promise.allSettled([
+            getTopUpProducts(controller.signal),
+            getTopUpGames(controller.signal),
+        ])
+            .then(([productsResult, gamesResult]) => {
+                if (controller.signal.aborted) return;
+
+                if (productsResult.status === "fulfilled") {
+                    setProducts(productsResult.value);
+                } else if (productsResult.reason?.name !== "CanceledError") {
+                    setError(getApiErrorMessage(productsResult.reason));
+                }
+
+                // Cover art lives on the game, not the product. A failure here only
+                // costs artwork, so the catalogue still renders without it.
+                if (gamesResult.status === "fulfilled") {
+                    setGamesById(new Map(gamesResult.value.map((game) => [game.id, game])));
                 }
             })
             .finally(() => {
-                if (!controller.signal.aborted) {
-                    setLoading(false);
-                }
+                if (!controller.signal.aborted) setLoading(false);
             });
 
         return () => controller.abort();
     }, []);
 
-    const filteredProducts = useMemo(
-        () => category === "ALL"
-            ? products
-            : products.filter((product) => categoryForProduct(product) === category),
-        [category, products],
+    const platforms = useMemo(
+        () => [...new Set(products.map((product) => product.platform).filter(Boolean))].sort(),
+        [products],
     );
 
     const games = useMemo(() => {
         const grouped = new Map();
+        const search = query.trim().toLowerCase();
 
-        filteredProducts.forEach((product) => {
-            const title = product.gameTitle || product.name || "Other top-ups";
+        products.forEach((product) => {
+            if (category !== "ALL" && categoryForProduct(product) !== category) return;
+            if (platform !== "ALL" && product.platform !== platform) return;
+
+            const game = gamesById.get(product.gameId);
+            const title = game?.title || product.gameTitle || product.name || "Other top-ups";
+
+            if (search && !title.toLowerCase().includes(search)) return;
+
             const current = grouped.get(title) || {
                 title,
-                imageUrl: product.imageUrl,
+                slug: game?.slug || toSlug(title),
+                coverImageUrl: game?.coverImageUrl || product.imageUrl || null,
                 products: [],
             };
 
             current.products.push(product);
-            if (!current.imageUrl) current.imageUrl = product.imageUrl;
+            if (!current.coverImageUrl) current.coverImageUrl = product.imageUrl;
             grouped.set(title, current);
         });
 
-        return [...grouped.values()];
-    }, [filteredProducts]);
+        return [...grouped.values()]
+            .map((game) => {
+                const products = sortByPrice(game.products);
+                const cheapest = cheapestProduct(products);
+
+                return { ...game, products, fromPrice: cheapest?.finalPrice, currency: cheapest?.currency };
+            })
+            .sort(sorters[sortBy] || sorters.ALPHABETICAL);
+    }, [category, gamesById, platform, products, query, sortBy]);
 
     return (
         <div className="container top-ups-page">
@@ -106,6 +138,39 @@ export default function TopUpsPage() {
                 ))}
             </nav>
 
+            <div className="top-ups-toolbar">
+                <span className="top-ups-toolbar__title">
+                    <SlidersHorizontal size={16} />
+                    {t("games.filters")}
+                </span>
+                <label className="top-ups-toolbar__search">
+                    <Search size={16} />
+                    <input
+                        placeholder={t("topUps.searchPlaceholder")}
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                    />
+                </label>
+                <label>
+                    {t("games.platform")}
+                    <select value={platform} onChange={(event) => setPlatform(event.target.value)}>
+                        <option value="ALL">{t("games.allPlatforms")}</option>
+                        {platforms.map((value) => (
+                            <option key={value} value={value}>{formatPlatform(value)}</option>
+                        ))}
+                    </select>
+                </label>
+                <label>
+                    {t("games.sortBy")}
+                    <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                        <option value="ALPHABETICAL">{t("games.alphabetical")}</option>
+                        <option value="PRICE_LOW">{t("games.lowHigh")}</option>
+                        <option value="PRICE_HIGH">{t("games.highLow")}</option>
+                        <option value="PACKAGES">{t("topUps.sortPackages")}</option>
+                    </select>
+                </label>
+            </div>
+
             {loading && <div className="status-panel">{t("topUps.loading")}</div>}
 
             {!loading && error && (
@@ -123,31 +188,45 @@ export default function TopUpsPage() {
             {!loading && !error && games.length > 0 && (
                 <section className="top-up-game-grid" aria-label={t("topUps.title")}>
                     {games.map((game) => {
-                        const imageUrl = resolveMediaUrl(game.imageUrl);
-                        const firstProduct = game.products[0];
+                        const coverUrl = resolveMediaUrl(game.coverImageUrl);
+                        const preview = game.products.slice(0, PREVIEW_PACKAGE_COUNT);
+                        const remaining = game.products.length - preview.length;
 
                         return (
                             <Link
-                                className="top-up-game-card"
+                                className="top-up-card"
                                 key={game.title}
-                                to={`/top-ups/${toSlug(game.title)}`}
-                                state={{ products: game.products }}
+                                to={`/top-ups/${game.slug}`}
+                                state={{ products: game.products, coverImageUrl: game.coverImageUrl, title: game.title }}
                             >
-                                <div className="top-up-game-card__cover">
-                                    {imageUrl ? (
-                                        <img src={imageUrl} alt={`${game.title} cover`} />
+                                <div className="top-up-card__cover">
+                                    {coverUrl ? (
+                                        <img src={coverUrl} alt="" loading="lazy" />
                                     ) : (
-                                        <Gamepad2 size={42} />
+                                        <span className="top-up-card__cover-fallback" aria-hidden="true">
+                                            <Gamepad2 size={40} />
+                                        </span>
                                     )}
-                                    <span>{game.products.length} packages</span>
+                                    <span className="top-up-card__badge">{t("topUps.badge")}</span>
                                 </div>
-                                <div className="top-up-game-card__content">
-                                    <small>{t("topUps.title")}</small>
+
+                                <div className="top-up-card__body">
                                     <h2>{game.title}</h2>
-                                    <p>
-                                        {t("common.from")} {firstProduct.currency || "USD"} {firstProduct.finalPrice}
-                                    </p>
-                                    <ArrowRight size={18} />
+                                    <ul className="top-up-card__packages">
+                                        {preview.map((product) => (
+                                            <li key={product.id}>{packageSummary(product)}</li>
+                                        ))}
+                                        {remaining > 0 && (
+                                            <li className="is-muted">{t("topUps.morePackages", { count: remaining })}</li>
+                                        )}
+                                    </ul>
+                                    <footer className="top-up-card__footer">
+                                        <span>
+                                            <small>{t("common.from")}</small>
+                                            <strong>{formatCurrency(game.fromPrice, game.currency || "USD")}</strong>
+                                        </span>
+                                        <span className="top-up-card__cta">{t("topUps.buyNow")}</span>
+                                    </footer>
                                 </div>
                             </Link>
                         );

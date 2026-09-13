@@ -25,6 +25,20 @@ export async function getTopUpProducts(signal) {
     return products.filter((product) => topUpTypes.has(product.productType));
 }
 
+export async function getTopUpGames(signal) {
+    const response = await httpClient.get("/games/search", {
+        params: {
+            catalogType: "TOP_UP",
+            sortBy: "ALPHABETICAL",
+            page: 0,
+            size: 200,
+        },
+        signal,
+    });
+
+    return response.data.data?.content || [];
+}
+
 export async function addTopUpToCart(productId, playerAccountId) {
     const response = await httpClient.post("/cart/items", {
         productId,
