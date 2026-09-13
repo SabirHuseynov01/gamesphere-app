@@ -65,3 +65,21 @@ export async function getMyOrders(signal) {
     });
     return response.data.data?.content || [];
 }
+
+export async function updateProfile(payload) {
+    const response = await httpClient.put("/users/profile", payload);
+    return response.data.data;
+}
+
+export async function getNotifications(signal) {
+    const response = await httpClient.get("/notifications", {
+        params: { page: 0, size: 20 },
+        signal,
+    });
+    return response.data.data || [];
+}
+
+export async function markNotificationRead(id) {
+    const response = await httpClient.patch(`/notifications/${id}/read`);
+    return response.data.data;
+}
