@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { getTopUpGames, getTopUpProducts } from "../api/topUpApi.js";
 import { getApiErrorMessage } from "../api/httpClient.js";
 import { useTranslation } from "../i18n/index.jsx";
-import { formatCurrency, formatPlatform } from "../utils/formatters.js";
+import { formatPlatform } from "../utils/formatters.js";
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
 import { cheapestProduct, packageSummary, sortByPrice, toSlug } from "../utils/topUps.js";
 import "../styles/top-ups.css";
@@ -145,8 +145,10 @@ export default function TopUpsPage() {
                 </span>
                 <label className="top-ups-toolbar__search">
                     <Search size={16} />
+                    {/* No placeholder by request, so the field still needs a name for
+                        screen readers and for the icon-only control to be understood. */}
                     <input
-                        placeholder={t("topUps.searchPlaceholder")}
+                        aria-label={t("topUps.searchPlaceholder")}
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                     />
@@ -221,10 +223,6 @@ export default function TopUpsPage() {
                                         )}
                                     </ul>
                                     <footer className="top-up-card__footer">
-                                        <span>
-                                            <small>{t("common.from")}</small>
-                                            <strong>{formatCurrency(game.fromPrice, game.currency || "USD")}</strong>
-                                        </span>
                                         <span className="top-up-card__cta">{t("topUps.buyNow")}</span>
                                     </footer>
                                 </div>
