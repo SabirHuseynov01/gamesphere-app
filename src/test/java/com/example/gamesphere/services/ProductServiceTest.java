@@ -1,6 +1,7 @@
 package com.example.gamesphere.services;
 
 import com.example.gamesphere.dto.request.ProductCreateRequest;
+import com.example.gamesphere.dto.request.ProductUpdateRequest;
 import com.example.gamesphere.dto.response.ProductResponse;
 import com.example.gamesphere.entity.Game;
 import com.example.gamesphere.entity.Category;
@@ -8,6 +9,8 @@ import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.entity.SellerProfile;
 import com.example.gamesphere.entity.User;
 import com.example.gamesphere.enums.Platform;
+import com.example.gamesphere.enums.CatalogSection;
+import com.example.gamesphere.enums.DeliveryType;
 import com.example.gamesphere.enums.ProductStatus;
 import com.example.gamesphere.enums.ProductType;
 import com.example.gamesphere.exception.BusinessException;
@@ -22,6 +25,9 @@ import com.example.gamesphere.util.DiscountCalculator;
 import com.example.gamesphere.util.SlugGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest extends ServiceTestSupport {
@@ -65,6 +72,8 @@ class ProductServiceTest extends ServiceTestSupport {
         product.setPlatform(request.getPlatform());
         product.setPrice(request.getPrice());
         product.setStockQuantity(request.getStockQuantity());
+        product.setStoreName(request.getStoreName());
+        product.setStoreUrl(request.getStoreUrl());
         ProductResponse expected = new ProductResponse();
 
         when(userRepository.findByEmail("seller@mail.com")).thenReturn(Optional.of(seller));
@@ -100,67 +109,67 @@ class ProductServiceTest extends ServiceTestSupport {
     }
 
     @Test
-    void sameGameCanKeepDifferentEditionsButRejectsSameEditionOffer() {
-        authenticate("seller@mail.com");
-        User seller = user(2L, "seller@mail.com");
-        seller.setSeller(true);
-        SellerProfile profile = new SellerProfile();
-        profile.setApproved(true);
-        Game game = withId(Game.builder().title("Assassin's Creed Shadows").slug("assassins-creed-shadows").build(), 7L);
+    void adminCanCreatePaidRedirectGameWithoutSellerProfile() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin@mail.com", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        User admin = user(9L, "admin@mail.com");
+        Game game = withId(Game.builder().title("The Witcher 3").slug("the-witcher-3").build(), 11L);
+        ProductCreateRequest request = request();
+        request.setName("The Witcher 3 Complete Edition - Steam");
+        request.setGameId(11L);
+        request.setProductType(ProductType.GAME);
+        request.setCatalogSection(com.example.gamesphere.enums.CatalogSection.MARKETPLACE);
+        request.setDeliveryType(com.example.gamesphere.enums.DeliveryType.STORE_REDIRECT);
+        Product product = new Product();
+        product.setName(request.getName());
+        product.setPlatform(request.getPlatform());
+        product.setPrice(request.getPrice());
+        product.setStockQuantity(request.getStockQuantity());
+        product.setStoreName(request.getStoreName());
+        product.setStoreUrl(request.getStoreUrl());
+        ProductResponse expected = new ProductResponse();
 
-        ProductCreateRequest standardRequest = request();
-        standardRequest.setName("Assassin's Creed Shadows Standard Edition");
-        standardRequest.setEditionName("Standard Edition");
-        standardRequest.setProductType(ProductType.GAME);
-        standardRequest.setStoreName("Steam");
+        when(userRepository.findByEmail("admin@mail.com")).thenReturn(Optional.of(admin));
+        when(productMapper.toEntity(request)).thenReturn(product);
+        when(gameRepository.findById(11L)).thenReturn(Optional.of(game));
+        when(slugGenerator.generate("The Witcher 3 Complete Edition - Steam-PC"))
+                .thenReturn("the-witcher-3-complete-edition-steam-pc");
+        when(productRepository.existsBySlug("the-witcher-3-complete-edition-steam-pc")).thenReturn(false);
+        when(productRepository.save(product)).thenReturn(product);
+        when(productMapper.toResponse(product)).thenReturn(expected);
 
-        Product standard = product("Assassin's Creed Shadows Standard Edition", "Standard Edition", game);
-        when(userRepository.findByEmail("seller@mail.com")).thenReturn(Optional.of(seller));
-        when(sellerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(profile));
-        when(gameRepository.findById(7L)).thenReturn(Optional.of(game));
-        when(productMapper.toEntity(standardRequest)).thenReturn(standard);
-        when(productRepository.findByGameIdAndPlatformAndStoreNameIgnoreCaseAndEditionNameIgnoreCaseAndIsDeletedFalse(
-                7L, Platform.PC, "Steam", "Standard Edition")).thenReturn(Optional.empty());
-        when(slugGenerator.generate("Assassin's Creed Shadows Standard Edition-Standard Edition-PC"))
-                .thenReturn("assassins-creed-shadows-standard-edition-pc");
-        when(productRepository.existsBySlug("assassins-creed-shadows-standard-edition-pc")).thenReturn(false);
-        when(productRepository.save(standard)).thenReturn(standard);
-        when(productMapper.toResponse(standard)).thenReturn(new ProductResponse());
-
-        productService.createProduct(standardRequest);
-
-        ProductCreateRequest duplicateRequest = new ProductCreateRequest();
-        duplicateRequest.setName("Assassin's Creed Shadows Standard Edition");
-        duplicateRequest.setEditionName("Standard Edition");
-        duplicateRequest.setGameId(7L);
-        duplicateRequest.setPrice(new BigDecimal("59.99"));
-        duplicateRequest.setStockQuantity(0);
-        duplicateRequest.setPlatform(Platform.PC);
-        duplicateRequest.setProductType(ProductType.GAME);
-        duplicateRequest.setStoreName("Steam");
-        duplicateRequest.setStoreUrl("https://store.steampowered.com/");
-        Product duplicate = product("Assassin's Creed Shadows Standard Edition", "Standard Edition", game);
-        when(productMapper.toEntity(duplicateRequest)).thenReturn(duplicate);
-        when(productRepository.findByGameIdAndPlatformAndStoreNameIgnoreCaseAndEditionNameIgnoreCaseAndIsDeletedFalse(
-                7L, Platform.PC, "Steam", "Standard Edition")).thenReturn(Optional.of(standard));
-
-        assertThatThrownBy(() -> productService.createProduct(duplicateRequest))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("edition offer already exists");
-        verify(productRepository, org.mockito.Mockito.times(1)).save(standard);
+        assertThat(productService.createProduct(request)).isSameAs(expected);
+        assertThat(product.getSeller()).isSameAs(admin);
+        verify(sellerProfileRepository, never()).findByUserId(admin.getId());
     }
 
-    private Product product(String name, String editionName, Game game) {
-        Product product = new Product();
-        product.setName(name);
-        product.setEditionName(editionName);
-        product.setGame(game);
+    @Test
+    void adminCanUpdatePaidRedirectGameWithoutSellerProfile() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin@mail.com", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        User admin = user(9L, "admin@mail.com");
+        Product product = withId(new Product(), 15L);
+        product.setName("The Witcher 3 Complete Edition - Steam");
         product.setPlatform(Platform.PC);
+        product.setPrice(new BigDecimal("49.99"));
+        product.setStockQuantity(5);
+        product.setStatus(ProductStatus.ACTIVE);
+        product.setProductType(ProductType.GAME);
+        product.setCatalogSection(CatalogSection.MARKETPLACE);
+        product.setDeliveryType(DeliveryType.STORE_REDIRECT);
         product.setStoreName("Steam");
         product.setStoreUrl("https://store.steampowered.com/");
-        product.setPrice(new BigDecimal("59.99"));
-        product.setStockQuantity(0);
-        return product;
+        ProductUpdateRequest request = new ProductUpdateRequest();
+        request.setDescription("Updated description");
+        ProductResponse expected = new ProductResponse();
+
+        when(productRepository.findById(15L)).thenReturn(Optional.of(product));
+        when(userRepository.findByEmail("admin@mail.com")).thenReturn(Optional.of(admin));
+        when(productRepository.save(product)).thenReturn(product);
+        when(productMapper.toResponse(product)).thenReturn(expected);
+
+        assertThat(productService.updateProduct(15L, request)).isSameAs(expected);
+        verify(sellerProfileRepository, never()).findByUserId(admin.getId());
     }
 
     private ProductCreateRequest request() {
@@ -176,3 +185,4 @@ class ProductServiceTest extends ServiceTestSupport {
         return request;
     }
 }
+

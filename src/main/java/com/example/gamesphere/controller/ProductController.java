@@ -7,8 +7,8 @@ import com.example.gamesphere.dto.response.ApiResponse;
 import com.example.gamesphere.dto.response.PageResponse;
 import com.example.gamesphere.dto.response.ProductImageResponse;
 import com.example.gamesphere.dto.response.ProductResponse;
-import com.example.gamesphere.service.ProductImageService;
 import com.example.gamesphere.service.ProductQueryService;
+import com.example.gamesphere.service.ProductImageService;
 import com.example.gamesphere.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -33,32 +33,20 @@ public class ProductController {
     private final ProductService productService;
     private final ProductImageService productImageService;
 
+
     @PostMapping
-    @Operation(summary = "Create product", description = "Creates a new marketplace product for the current seller.")
+    @Operation(summary = "Create product", description = "Creates a marketplace product for an approved seller, or a paid redirect game offer for an admin.")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
             @Valid @RequestBody ProductCreateRequest request) {
+
         ProductResponse response = productService.createProduct(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Product created successfully", response));
     }
 
-    @PostMapping("/{id}/images")
-    @Operation(summary = "Upload product image",
-            description = "Uploads a product image and optionally marks it as primary.")
-    @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ApiResponse<ProductImageResponse>> uploadProductImage(
-            @PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(defaultValue = "false") boolean primary,
-            @RequestParam(defaultValue = "0") int sortOrder) {
-        ProductImageResponse image = productImageService.uploadProductImage(id, file, primary, sortOrder);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Product image uploaded", image));
-    }
-
     @PutMapping("/{id}")
-    @Operation(summary = "Update product", description = "Updates an existing product owned by the current seller.")
+    @Operation(summary = "Update product", description = "Updates a seller-owned product, or an admin-managed paid redirect game offer.")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @PathVariable Long id,
@@ -67,20 +55,26 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success("Product updated", response));
     }
 
-    @GetMapping
-    @Operation(summary = "Filter products",
-            description = "Returns paginated products by search, genre, platform, type, status and price filters.")
-    public ResponseEntity<ApiResponse<PageResponse<ProductResponse>>> getAllProducts(
-            ProductFilterRequest filter, Pageable pageable) {
-        PageResponse<ProductResponse> page = productQueryService.getAllProducts(filter, pageable);
-        return ResponseEntity.ok(ApiResponse.success("Products list", page));
-    }
-
     @GetMapping("/{id}")
     @Operation(summary = "Get product by id", description = "Returns product details by product id.")
     public ResponseEntity<ApiResponse<ProductResponse>> getProduct(@PathVariable Long id) {
         ProductResponse response = productQueryService.getProductById(id);
         return ResponseEntity.ok(ApiResponse.success("Product found", response));
+    }
+
+    @GetMapping("/slug/{slug}")
+    @Operation(summary = "Get product by slug", description = "Returns product details by SEO-friendly slug.")
+    public ResponseEntity<ApiResponse<ProductResponse>> getProductBySlug(@PathVariable String slug) {
+        ProductResponse response = productQueryService.getProductBySlug(slug);
+        return ResponseEntity.ok(ApiResponse.success("Product found", response));
+    }
+
+    @GetMapping
+    @Operation(summary = "Filter products", description = "Returns paginated products by search, genre, platform, type, status and price filters.")
+    public ResponseEntity<ApiResponse<PageResponse<ProductResponse>>> getAllProducts(
+            ProductFilterRequest filter, Pageable pageable) {
+        PageResponse<ProductResponse> page = productQueryService.getAllProducts(filter, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Products list", page));
     }
 
     @GetMapping("/active")
@@ -97,16 +91,8 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success("Seller products retrieved", products));
     }
 
-    @GetMapping("/slug/{slug}")
-    @Operation(summary = "Get product by slug", description = "Returns product details by SEO-friendly slug.")
-    public ResponseEntity<ApiResponse<ProductResponse>> getProductBySlug(@PathVariable String slug){
-        ProductResponse response = productQueryService.getProductBySlug(slug);
-        return ResponseEntity.ok(ApiResponse.success("Product found", response));
-    }
-
     @GetMapping("/{id}/recommendations/same-genre")
-    @Operation(summary = "Recommend same genre products",
-            description = "Returns products with the same genre as the selected product.")
+    @Operation(summary = "Recommend same genre products", description = "Returns products with the same genre as the selected product.")
     public ResponseEntity<ApiResponse<List<ProductResponse>>> getSameGenreRecommendations(@PathVariable Long id) {
         List<ProductResponse> products = productQueryService.getSameGenreRecommendations(id);
         return ResponseEntity.ok(ApiResponse.success("Same genre recommendations retrieved", products));
@@ -120,12 +106,24 @@ public class ProductController {
     }
 
     @GetMapping("/recommendations/wishlist/{userId}")
-    @Operation(summary = "Recommend from wishlist categories",
-            description = "Returns category-based recommendations using a user's wishlist.")
+    @Operation(summary = "Recommend from wishlist categories", description = "Returns category-based recommendations using a user's wishlist.")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<List<ProductResponse>>> getWishlistCategoryRecommendations(@PathVariable Long userId) {
         List<ProductResponse> products = productQueryService.getWishlistCategoryRecommendations(userId);
         return ResponseEntity.ok(ApiResponse.success("Wishlist based recommendations retrieved", products));
+    }
+
+    @PostMapping("/{id}/images")
+    @Operation(summary = "Upload product image", description = "Uploads a product image and optionally marks it as primary.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<ProductImageResponse>> uploadProductImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "false") boolean primary,
+            @RequestParam(defaultValue = "0") int sortOrder) {
+        ProductImageResponse image = productImageService.uploadProductImage(id, file, primary, sortOrder);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Product image uploaded", image));
     }
 
     @GetMapping("/{id}/images")

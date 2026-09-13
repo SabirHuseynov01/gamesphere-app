@@ -3,6 +3,7 @@ package com.example.gamesphere.services;
 import com.example.gamesphere.dto.request.AddCartItemRequest;
 import com.example.gamesphere.dto.response.CartResponse;
 import com.example.gamesphere.entity.Cart;
+import com.example.gamesphere.entity.CartItem;
 import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.entity.User;
 import com.example.gamesphere.enums.DeliveryType;
@@ -85,20 +86,77 @@ class CartServiceTest extends ServiceTestSupport {
     }
 
     @Test
-    void topUpProductRequiresPlayerAccountId() {
+    void topUpProductIsAddedBeforeThePlayerAccountIdIsKnown() {
         authenticate("user@mail.com");
         User user = user(1L, "user@mail.com");
         Product product = product(10L, true, 5);
         product.setDeliveryType(DeliveryType.PLAYER_ID_TOP_UP);
         product.setRequiresPlayerId(true);
         product.setPlayerIdLabel("PUBG Mobile Player ID");
+        Cart cart = new Cart();
+        cart.setUser(user);
+        CartResponse expected = new CartResponse();
 
         when(userRepository.findByEmail("user@mail.com")).thenReturn(Optional.of(user));
         when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+        when(cartRepository.save(cart)).thenReturn(cart);
+        when(cartMapper.toResponse(cart)).thenReturn(expected);
 
-        assertThatThrownBy(() -> cartService.addToCart(new AddCartItemRequest(10L, 1)))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("PUBG Mobile Player ID is required for Game key.");
+        assertThat(cartService.addToCart(new AddCartItemRequest(10L, 1))).isSameAs(expected);
+        assertThat(cart.getCartItems()).singleElement().satisfies(item ->
+                assertThat(item.getPlayerAccountId()).isNull());
+    }
+
+    @Test
+    void existingRowAdoptsThePlayerAccountIdSuppliedLater() {
+        authenticate("user@mail.com");
+        User user = user(1L, "user@mail.com");
+        Product product = product(10L, true, 5);
+        product.setDeliveryType(DeliveryType.PLAYER_ID_TOP_UP);
+        product.setRequiresPlayerId(true);
+        Cart cart = new Cart();
+        cart.setUser(user);
+        CartItem existing = new CartItem();
+        existing.setCart(cart);
+        existing.setProduct(product);
+        existing.setQuantity(1);
+        cart.getCartItems().add(existing);
+
+        when(userRepository.findByEmail("user@mail.com")).thenReturn(Optional.of(user));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+        when(cartRepository.save(cart)).thenReturn(cart);
+        when(cartMapper.toResponse(cart)).thenReturn(new CartResponse());
+
+        cartService.addToCart(new AddCartItemRequest(10L, 1, "5606020504"));
+
+        assertThat(existing.getPlayerAccountId()).isEqualTo("5606020504");
+        assertThat(existing.getQuantity()).isEqualTo(2);
+    }
+
+    @Test
+    void switchingAnExistingRowToAnotherPlayerAccountIsRefused() {
+        authenticate("user@mail.com");
+        User user = user(1L, "user@mail.com");
+        Product product = product(10L, true, 5);
+        product.setDeliveryType(DeliveryType.PLAYER_ID_TOP_UP);
+        product.setRequiresPlayerId(true);
+        Cart cart = new Cart();
+        cart.setUser(user);
+        CartItem existing = new CartItem();
+        existing.setCart(cart);
+        existing.setProduct(product);
+        existing.setQuantity(1);
+        existing.setPlayerAccountId("5606020504");
+        cart.getCartItems().add(existing);
+
+        when(userRepository.findByEmail("user@mail.com")).thenReturn(Optional.of(user));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+
+        assertThatThrownBy(() -> cartService.addToCart(new AddCartItemRequest(10L, 1, "9999999999")))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
@@ -137,4 +195,3 @@ class CartServiceTest extends ServiceTestSupport {
         return product;
     }
 }
-

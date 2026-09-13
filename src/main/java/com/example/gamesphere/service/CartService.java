@@ -78,7 +78,12 @@ public class CartService {
                 .orElse(null);
 
         if (existingItem != null) {
-            if (!Objects.equals(existingItem.getPlayerAccountId(), playerAccountId)) {
+            // A row added before the id was known adopts it on the next add; only a
+            // genuine switch between two different accounts is refused.
+            if (existingItem.getPlayerAccountId() == null) {
+                existingItem.setPlayerAccountId(playerAccountId);
+            } else if (playerAccountId != null
+                    && !Objects.equals(existingItem.getPlayerAccountId(), playerAccountId)) {
                 throw new BusinessException(
                         "This product is already in the cart for a different player account. "
                                 + "Remove it before changing the player account.");
@@ -134,23 +139,18 @@ public class CartService {
         return cartRepository.save(cart);
     }
 
+    /**
+     * A shopper may not know their in-game id while still browsing, so the cart
+     * accepts a top-up without one. Order placement still refuses to proceed
+     * until it is supplied, which is where the id is actually needed.
+     */
     private String resolvePlayerAccountId(Product product, String playerAccountId) {
+        if (!product.isRequiresPlayerId()) {
+            return null;
+        }
+
         String normalizedId = playerAccountId == null ? null : playerAccountId.trim();
 
-        if (normalizedId != null && normalizedId.isBlank()) {
-            normalizedId = null;
-        }
-
-        if (product.isRequiresPlayerId() && normalizedId == null) {
-            String label = product.getPlayerIdLabel() == null
-                    || product.getPlayerIdLabel().isBlank()
-                    ? "Player account ID"
-                    : product.getPlayerIdLabel();
-
-            throw new BusinessException(label + " is required for " + product.getName() + ".");
-        }
-
-        return product.isRequiresPlayerId() ? normalizedId : null;
+        return normalizedId == null || normalizedId.isBlank() ? null : normalizedId;
     }
 }
-
