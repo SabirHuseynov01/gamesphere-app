@@ -22,7 +22,7 @@ anything.
 | Styling | Plain CSS with custom properties — no framework |
 | Linting | ESLint 10 (flat config) |
 
-No state library: two React contexts cover everything the app shares.
+No state library: three React contexts cover everything the app shares.
 
 ---
 
@@ -57,6 +57,8 @@ VITE_BACKEND_URL=http://localhost:8080
   lives here.
 - **`VITE_BACKEND_URL`** — origin used to resolve uploaded images served from
   `/uploads`. Falls back to `http://localhost:8080`.
+- **`VITE_AZN_PER_USD`** — rate the AZN display switch converts at. Defaults to
+  `1.7`.
 
 `.env` is gitignored; `.env.example` is the committed template.
 
@@ -74,6 +76,7 @@ src/
 ├── features/       Feature-scoped components (games, offers, top-ups, reviews)
 ├── i18n/           Translations and the useTranslation hook
 ├── layouts/        MainLayout (header + outlet + footer)
+├── money/          CurrencyProvider — display currency and conversion
 ├── pages/          One component per route
 ├── styles/         Global tokens and per-area stylesheets
 └── utils/          Formatting, media URLs, top-up helpers
@@ -94,13 +97,15 @@ directly.** A page asks a module in `api/`, or reads from a context.
 | `/marketplace` | Marketplace products |
 | `/top-ups` | Top-up catalogue, grouped by game |
 | `/top-ups/:slug` | Packages for one game |
+| `/checkout` | Payment method and cart summary |
+| `/payment/success`, `/payment/cancel` | Where Stripe returns to |
 | `/account`, `/account/:section` | Dashboard — `profile`, `orders`, `wishlist`, `notifications` |
 | `/tournaments` | Placeholder section |
 | `*` | Not found |
 
 ---
 
-## The two contexts
+## The three contexts
 
 ### `I18nProvider` (`src/i18n/`)
 
@@ -115,6 +120,10 @@ t("topUps.packageCount", { count: 7 });   // "7 packages"
 
 A missing key renders its own path (`topUps.badge`), which makes an out-of-date
 translation file obvious on screen instead of silent.
+
+### `CurrencyProvider` (`src/money/`)
+
+The display currency, covered under [Money and currency](#money-and-currency).
 
 ### `AccountProvider` (`src/account/`)
 
@@ -145,6 +154,47 @@ total). Each carries a count badge. They close on outside click and on `Escape`.
 
 There is no "sign in with Google / Facebook" — the backend exposes no OAuth
 flow, and a button that cannot do anything is worse than no button.
+
+---
+
+## Money and currency
+
+A product is **stored and charged** in its own currency. On top of that,
+`CurrencyProvider` adds a **display currency** the shopper picks in the header
+(AZN by default, USD the alternative), converted at `VITE_AZN_PER_USD`:
+
+```jsx
+const { formatPrice, isConverted, displayCurrency } = useMoney();
+formatPrice(product.finalPrice, product.currency);   // "₼37.37"
+```
+
+Conversion is presentation only. Checkout states the real charge — *"Shown in
+AZN. The payment is charged in USD — 21.98 USD."* — so the number on the card
+statement is never a surprise. A currency with no configured rate is printed as
+it is rather than converted at a guess.
+
+---
+
+## Checkout
+
+The cart's **Checkout** goes to `/checkout`, which lists the payment methods
+the backend can really take and summarises the cart. Paying runs:
+
+```
+POST /api/order/from-cart          → { id }
+POST /api/payments/stripe/checkout → { checkoutUrl }
+window.location.assign(checkoutUrl)
+```
+
+**There is no card form in this codebase, and there should not be one.** Card
+number and CVV fields on our own page would put the project in PCI-DSS SAQ D
+scope. Stripe Checkout is hosted on Stripe's domain, which keeps it at SAQ A.
+If the form ever needs to sit inside our own page, the answer is Stripe
+Elements — the inputs are still Stripe iframes — not hand-written inputs.
+
+Stripe returns to `/payment/success` or `/payment/cancel`. Those must match
+`STRIPE_SUCCESS_URL` and `STRIPE_CANCEL_URL` on the backend, which default to
+port **3000** while this app runs on **5173** — set them.
 
 ---
 

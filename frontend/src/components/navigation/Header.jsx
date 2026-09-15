@@ -1,4 +1,5 @@
 import {
+    Coins,
     Gamepad2,
     Globe2,
     ShoppingBag,
@@ -12,12 +13,14 @@ import AccountMenu from "./AccountMenu.jsx";
 import CartMenu from "./CartMenu.jsx";
 import WishlistMenu from "./WishlistMenu.jsx";
 import { useTranslation } from "../../i18n/index.jsx";
+import { useMoney } from "../../money/CurrencyProvider.jsx";
 import "../../styles/header-menus.css";
 
 export default function Header() {
     const navigate = useNavigate();
     const [query, setQuery] = useState("");
     const { language, setLanguage, t } = useTranslation();
+    const { currencies, displayCurrency, setDisplayCurrency } = useMoney();
 
     function handleSearch(event) {
         event.preventDefault();
@@ -88,6 +91,19 @@ export default function Header() {
                             <option value="TR">TR</option>
                             <option value="EN">EN</option>
                             <option value="RU">RU</option>
+                        </select>
+                    </label>
+
+                    <label className="language-control" title={t("nav.currency")}>
+                        <Coins size={17} />
+                        <select
+                            aria-label={t("nav.currency")}
+                            value={displayCurrency}
+                            onChange={(event) => setDisplayCurrency(event.target.value)}
+                        >
+                            {currencies.map((code) => (
+                                <option key={code} value={code}>{code}</option>
+                            ))}
                         </select>
                     </label>
 

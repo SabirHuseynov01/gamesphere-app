@@ -6,7 +6,8 @@ import { getTopUpGames, getTopUpProducts } from "../api/topUpApi.js";
 import { useAccount } from "../account/AccountProvider.jsx";
 import { getApiErrorMessage } from "../api/httpClient.js";
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
-import { formatCurrency, formatPlatform } from "../utils/formatters.js";
+import { formatPlatform } from "../utils/formatters.js";
+import { useMoney } from "../money/CurrencyProvider.jsx";
 import { packageDenomination, packageTier, sortByPrice, toSlug } from "../utils/topUps.js";
 import { useTranslation } from "../i18n/index.jsx";
 import "../styles/top-ups.css";
@@ -14,6 +15,7 @@ import "../styles/top-ups.css";
 export default function TopUpDetailsPage() {
     const { t } = useTranslation();
     const { addToCart, isAuthenticated } = useAccount();
+    const { formatPrice } = useMoney();
     const { slug } = useParams();
     const { state } = useLocation();
     const [products, setProducts] = useState(state?.products || []);
@@ -177,9 +179,9 @@ export default function TopUpDetailsPage() {
                                                     : t("topUps.noBonus")}
                                             </p>
                                             <div className="top-up-package__price">
-                                                <strong>{formatCurrency(product.finalPrice, product.currency || "USD")}</strong>
+                                                <strong>{formatPrice(product.finalPrice, product.currency)}</strong>
                                                 {discounted && (
-                                                    <s>{formatCurrency(product.price, product.currency || "USD")}</s>
+                                                    <s>{formatPrice(product.price, product.currency)}</s>
                                                 )}
                                             </div>
                                             <button

@@ -83,3 +83,13 @@ export async function markNotificationRead(id) {
     const response = await httpClient.patch(`/notifications/${id}/read`);
     return response.data.data;
 }
+
+export async function createOrderFromCart() {
+    const response = await httpClient.post("/order/from-cart");
+    return response.data.data;
+}
+
+export async function createStripeCheckout(orderId) {
+    const response = await httpClient.post("/payments/stripe/checkout", { orderId });
+    return response.data.data;
+}
