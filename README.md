@@ -56,12 +56,11 @@ from entity scanning.
 
 ### 3. Swagger
 
-<http://localhost:8080/swagger-ui/index.html> — every endpoint, grouped by
+<http://localhost:8080/swagger-ui.html> — every endpoint, grouped by
 controller, with request and response schemas.
 
-Use that full path: `SecurityConfig` permits `/swagger-ui/**` and
-`/v3/api-docs/**`, and the short `/swagger-ui.html` is not covered by either
-pattern, so it answers 401 without a token.
+The raw OpenAPI document is at `/v3/api-docs` (`/v3/api-docs.yaml` for YAML).
+All of it is reachable without a token.
 
 ---
 

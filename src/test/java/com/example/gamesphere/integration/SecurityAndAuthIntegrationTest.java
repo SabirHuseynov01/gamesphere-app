@@ -67,6 +67,20 @@ class SecurityAndAuthIntegrationTest {
     }
 
     @Test
+    void apiDocumentationIsReachableWithoutAToken() throws Exception {
+        // /swagger-ui.html redirects into /swagger-ui/index.html; both it and the
+        // OpenAPI document must stay outside the authenticated matchers.
+        mockMvc.perform(get("/swagger-ui.html"))
+                .andExpect(status().is3xxRedirection());
+
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void browserPreflightIsAnsweredBeforeAuthenticationKicksIn() throws Exception {
         mockMvc.perform(options("/api/order/my")
                         .header(HttpHeaders.ORIGIN, "http://localhost:5173")
