@@ -1,0 +1,197 @@
+{
+  "info": {
+    "name": "GameSphere — Tournaments",
+    "description": "Every /api/tournaments endpoint. Run \"Login\" first: it stores the access token in the {{token}} collection variable, and every other request needs it — the security chain ends in anyRequest().authenticated(), so even the GET endpoints are closed to guests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api" },
+    { "key": "token", "value": "" },
+    { "key": "tournamentId", "value": "1" },
+    { "key": "creatorId", "value": "1" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Login (stores {{token}})",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('token', body.data.accessToken);",
+              "pm.test('token stored', () => pm.expect(body.data.accessToken).to.be.a('string'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@gamesphere.com\",\n  \"password\": \"Admin123!\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Create tournament — Summer Cup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('tournamentId', body.data.id);",
+              "pm.test('created', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/tournaments", "host": ["{{baseUrl}}"], "path": ["tournaments"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"GameSphere Summer Cup\",\n  \"description\": \"Open 5v5 Counter-Strike 2 bracket. Single elimination, BO1 until the semi-final, BO3 from there.\",\n  \"entryFee\": 5.00,\n  \"startDate\": \"2026-08-22T18:00:00\",\n  \"endDate\": \"2026-08-22T23:00:00\",\n  \"game\": \"Counter-Strike 2\",\n  \"maxParticipants\": 64,\n  \"prizePool\": 500.00\n}"
+        }
+      }
+    },
+    {
+      "name": "Create tournament — Racing Rivals",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/tournaments", "host": ["{{baseUrl}}"], "path": ["tournaments"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Racing Rivals\",\n  \"description\": \"Forza Horizon 5 time-attack. Three circuits, best combined lap time wins.\",\n  \"entryFee\": 2.50,\n  \"startDate\": \"2026-08-30T17:00:00\",\n  \"endDate\": \"2026-08-30T21:30:00\",\n  \"game\": \"Forza Horizon 5\",\n  \"maxParticipants\": 32,\n  \"prizePool\": 250.00\n}"
+        }
+      }
+    },
+    {
+      "name": "Create tournament — Fighter's Arena",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/tournaments", "host": ["{{baseUrl}}"], "path": ["tournaments"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Fighter's Arena\",\n  \"description\": \"Mortal Kombat 1 1v1 ladder. Double elimination, no character locking.\",\n  \"entryFee\": 1.00,\n  \"startDate\": \"2026-09-05T19:00:00\",\n  \"endDate\": \"2026-09-05T22:00:00\",\n  \"game\": \"Mortal Kombat 1\",\n  \"maxParticipants\": 16,\n  \"prizePool\": 150.00\n}"
+        }
+      }
+    },
+    {
+      "name": "Create tournament — minimum body",
+      "description": "Only the fields the DTO marks @NotNull/@NotBlank. maxParticipants omitted maps to 0, which the join service reads as \"no limit\".",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/tournaments", "host": ["{{baseUrl}}"], "path": ["tournaments"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Friday Night Scrim\",\n  \"entryFee\": 0.50,\n  \"startDate\": \"2026-09-11T20:00:00\",\n  \"endDate\": \"2026-09-11T23:00:00\"\n}"
+        }
+      }
+    },
+    {
+      "name": "List tournaments (paged)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/tournaments?page=0&size=20&sort=startDate,asc",
+          "host": ["{{baseUrl}}"],
+          "path": ["tournaments"],
+          "query": [
+            { "key": "page", "value": "0" },
+            { "key": "size", "value": "20" },
+            { "key": "sort", "value": "startDate,asc" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get tournament by id",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/tournaments/{{tournamentId}}", "host": ["{{baseUrl}}"], "path": ["tournaments", "{{tournamentId}}"] }
+      }
+    },
+    {
+      "name": "Filter by status",
+      "description": "UPCOMING | REGISTRATION_OPEN | IN_PROGRESS | FINISHED | CANCELLED",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/tournaments/status/UPCOMING", "host": ["{{baseUrl}}"], "path": ["tournaments", "status", "UPCOMING"] }
+      }
+    },
+    {
+      "name": "Filter by game",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/tournaments/game/Counter-Strike 2", "host": ["{{baseUrl}}"], "path": ["tournaments", "game", "Counter-Strike 2"] }
+      }
+    },
+    {
+      "name": "Upcoming after a date",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/tournaments/upcoming?after=2026-08-01T00:00:00",
+          "host": ["{{baseUrl}}"],
+          "path": ["tournaments", "upcoming"],
+          "query": [{ "key": "after", "value": "2026-08-01T00:00:00" }]
+        }
+      }
+    },
+    {
+      "name": "Tournaments by creator",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/tournaments/creator/{{creatorId}}", "host": ["{{baseUrl}}"], "path": ["tournaments", "creator", "{{creatorId}}"] }
+      }
+    },
+    {
+      "name": "Join tournament",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/join", "host": ["{{baseUrl}}"], "path": ["tournaments", "{{tournamentId}}", "join"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"inGameNickname\": \"sabir_hs\",\n  \"teamName\": \"Sphere Five\"\n}"
+        }
+      }
+    },
+    {
+      "name": "List participants",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/participants", "host": ["{{baseUrl}}"], "path": ["tournaments", "{{tournamentId}}", "participants"] }
+      }
+    },
+    {
+      "name": "My participation",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/participants/me", "host": ["{{baseUrl}}"], "path": ["tournaments", "{{tournamentId}}", "participants", "me"] }
+      }
+    },
+    {
+      "name": "Leave tournament",
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/leave", "host": ["{{baseUrl}}"], "path": ["tournaments", "{{tournamentId}}", "leave"] }
+      }
+    }
+  ]
+}
