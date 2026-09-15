@@ -20,7 +20,7 @@ const METHODS = [
 export default function CheckoutPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { cart, cartCount, isAuthenticated } = useAccount();
+    const { basketsLoading, cart, cartCount, isAuthenticated } = useAccount();
     const { formatPrice, isConverted, displayCurrency } = useMoney();
     const [method, setMethod] = useState(METHODS[0].key);
     const [busy, setBusy] = useState(false);
@@ -57,6 +57,15 @@ export default function CheckoutPage() {
                     <h1>{t("checkout.signInTitle")}</h1>
                     <p>{t("cart.signInFirst")}</p>
                 </div>
+            </div>
+        );
+    }
+
+    // The cart arrives after mount, so an unloaded cart must not read as empty.
+    if (basketsLoading) {
+        return (
+            <div className="container checkout-page">
+                <div className="checkout-guard">{t("common.loading")}</div>
             </div>
         );
     }

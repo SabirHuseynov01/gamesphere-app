@@ -139,6 +139,10 @@ const {
 } = useAccount();
 ```
 
+`basketsLoading` stays true until the first cart and wishlist read settles, so
+a page can tell "not fetched yet" from "really empty" — without it `/checkout`
+greeted a full cart with "Your cart is empty" on a direct load.
+
 Tokens live in `localStorage` and `api/httpClient.js` attaches the access token
 to every request. If the backend answers 401 to a cart or wishlist read, the
 stored session is dropped rather than leaving a signed-in shell that cannot
@@ -150,7 +154,13 @@ load.
 
 The three header icons each open a panel: **account** (sign in / register, or
 identity and links), **wishlist** and **cart** (contents, per-row removal,
-total). Each carries a count badge. They close on outside click and on `Escape`.
+total). Each carries a count badge.
+
+A mouse opens them on hover; a short close delay plus a CSS bridge over the
+gap lets the pointer travel from the button into the panel. Clicking still
+toggles, and is the only way in where `(hover: hover) and (pointer: fine)`
+does not match — on touch, hover either does not exist or sticks after a tap.
+They close on outside click and on `Escape`.
 
 There is no "sign in with Google / Facebook" — the backend exposes no OAuth
 flow, and a button that cannot do anything is worse than no button.

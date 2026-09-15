@@ -48,6 +48,9 @@ export function AccountProvider({ children }) {
     const [user, setUser] = useState(readStoredUser);
     const [cart, setCart] = useState(emptyCart);
     const [wishlist, setWishlist] = useState([]);
+    // A signed-in visitor starts with empty baskets that are not yet loaded;
+    // pages must be able to tell that apart from baskets that are really empty.
+    const [basketsLoading, setBasketsLoading] = useState(() => Boolean(readStoredUser()));
 
     const signOut = useCallback(async () => {
         const refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
@@ -63,6 +66,7 @@ export function AccountProvider({ children }) {
         setUser(null);
         setCart(emptyCart);
         setWishlist([]);
+        setBasketsLoading(false);
     }, []);
 
     const refreshBaskets = useCallback(async (signal) => {
@@ -72,6 +76,8 @@ export function AccountProvider({ children }) {
         ]);
 
         if (signal?.aborted) return;
+
+        setBasketsLoading(false);
 
         if (cartResult.status === "fulfilled") {
             setCart(toCart(cartResult.value));
@@ -107,11 +113,15 @@ export function AccountProvider({ children }) {
     }, [refreshBaskets, user]);
 
     const signIn = useCallback(async (email, password) => {
-        setUser(storeSession(await accountApi.login(email, password)));
+        const session = storeSession(await accountApi.login(email, password));
+        setBasketsLoading(true);
+        setUser(session);
     }, []);
 
     const createAccount = useCallback(async (payload) => {
-        setUser(storeSession(await accountApi.register(payload)));
+        const session = storeSession(await accountApi.register(payload));
+        setBasketsLoading(true);
+        setUser(session);
     }, []);
 
     const addToCart = useCallback(async (productId, playerAccountId) => {
@@ -134,6 +144,7 @@ export function AccountProvider({ children }) {
     const value = useMemo(() => ({
         user,
         isAuthenticated: Boolean(user),
+        basketsLoading,
         cart,
         cartCount: cart.items.reduce((total, item) => total + (item.quantity || 0), 0),
         wishlist,
@@ -145,7 +156,7 @@ export function AccountProvider({ children }) {
         removeFromCart,
         toggleWishlist,
         getApiErrorMessage,
-    }), [addToCart, cart, createAccount, removeFromCart, signIn, signOut, toggleWishlist, user, wishlist]);
+    }), [addToCart, basketsLoading, cart, createAccount, removeFromCart, signIn, signOut, toggleWishlist, user, wishlist]);
 
     return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }
