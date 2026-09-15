@@ -48,6 +48,9 @@
 .home-tournament strong { display: block; margin-top: var(--space-5); color: var(--color-primary); }
 .home-product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin-top: var(--space-6); }
 .home-product-tile__body small { color: var(--color-primary); font-weight: var(--font-weight-semibold); }
+.home-deal-badge { position: absolute; top: .65rem; right: .65rem; padding: .3rem .5rem; border-radius: var(--radius-sm); background: var(--color-primary); color: var(--color-text-on-primary); font-size: var(--font-size-xs); font-style: normal; font-weight: var(--font-weight-bold); }
+.home-deal-price { display: flex; align-items: baseline; gap: var(--space-2); }
+.home-deal-price s { color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: var(--font-weight-normal); }
 .home-feature-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin-top: var(--space-6); }
 .home-feature { display: grid; min-height: 11rem; align-content: space-between; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); transition: transform var(--transition-normal), border-color var(--transition-normal); }
 .home-feature:hover { transform: translateY(-4px); border-color: var(--color-primary); }
