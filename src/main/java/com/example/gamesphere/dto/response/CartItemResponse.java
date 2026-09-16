@@ -19,4 +19,6 @@ public class CartItemResponse {
     private BigDecimal price;
     private String currency;
     private String playerAccountId;
+    private boolean requiresPlayerId;
+    private String playerIdLabel;
 }

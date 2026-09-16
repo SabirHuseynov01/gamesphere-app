@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CreditCard, Lock, ShieldCheck, ShoppingCart } from "lucide-react";
+import { AlertTriangle, Check, CreditCard, Lock, ShieldCheck, ShoppingCart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { createOrderFromCart, createStripeCheckout } from "../api/accountApi.js";
@@ -17,10 +17,57 @@ const METHODS = [
     { key: "STRIPE_CARD", labelKey: "checkout.card", hintKey: "checkout.cardHint", available: true },
 ];
 
+/**
+ * One "we still need your in-game id" row. Keeps its own draft so typing in
+ * one field does not re-render the whole cart summary.
+ */
+function PlayerIdField({ item, t, onSave }) {
+    const [value, setValue] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [failure, setFailure] = useState("");
+    const label = item.playerIdLabel || t("topUps.playerId");
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+        setSaving(true);
+        setFailure("");
+
+        try {
+            await onSave(item.productId, value.trim());
+        } catch (requestError) {
+            setFailure(getApiErrorMessage(requestError));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <form className="checkout-player-id" onSubmit={handleSubmit}>
+            <label>
+                <span>{item.productName}</span>
+                <input
+                    disabled={saving}
+                    placeholder={label}
+                    required
+                    value={value}
+                    onChange={(event) => setValue(event.target.value)}
+                />
+            </label>
+
+            <button disabled={saving || !value.trim()} type="submit">
+                <Check size={16} />
+                {saving ? t("common.loading") : t("checkout.savePlayerId")}
+            </button>
+
+            {failure && <p className="checkout-player-id__error">{failure}</p>}
+        </form>
+    );
+}
+
 export default function CheckoutPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { basketsLoading, cart, cartCount, isAuthenticated } = useAccount();
+    const { basketsLoading, cart, cartCount, isAuthenticated, setCartPlayerId } = useAccount();
     const { formatPrice, isConverted, displayCurrency } = useMoney();
     const [method, setMethod] = useState(METHODS[0].key);
     const [busy, setBusy] = useState(false);
@@ -29,7 +76,16 @@ export default function CheckoutPage() {
     const chargeCurrency = cart.currency || cart.items[0]?.currency || null;
     const converted = isConverted(chargeCurrency);
 
+    // A top-up can be added before the shopper knows their in-game id, but the
+    // order is refused while it is missing — so it has to be askable here.
+    const missingPlayerIds = cart.items.filter((item) => item.requiresPlayerId && !item.playerAccountId);
+
     async function handlePay() {
+        if (missingPlayerIds.length > 0) {
+            setError(t("checkout.playerIdRequired"));
+            return;
+        }
+
         setBusy(true);
         setError("");
 
@@ -92,6 +148,7 @@ export default function CheckoutPage() {
             </header>
 
             <div className="checkout-shell">
+                <div className="checkout-main">
                 <section className="checkout-methods">
                     <p className="checkout-methods__notice">
                         <ShieldCheck size={18} />
@@ -117,6 +174,25 @@ export default function CheckoutPage() {
 
                     <p className="checkout-methods__foot">{t("checkout.providerNote")}</p>
                 </section>
+
+                {missingPlayerIds.length > 0 && (
+                    <section className="checkout-player-ids">
+                        <p className="checkout-player-ids__notice">
+                            <AlertTriangle size={18} />
+                            {t("checkout.playerIdIntro")}
+                        </p>
+
+                        {missingPlayerIds.map((item) => (
+                            <PlayerIdField
+                                item={item}
+                                key={item.productId}
+                                t={t}
+                                onSave={setCartPlayerId}
+                            />
+                        ))}
+                    </section>
+                )}
+                </div>
 
                 <aside className="checkout-summary">
                     <header>
@@ -154,7 +230,12 @@ export default function CheckoutPage() {
 
                     {error && <p className="checkout-summary__error">{error}</p>}
 
-                    <button className="checkout-summary__pay" disabled={busy} type="button" onClick={handlePay}>
+                    <button
+                        className="checkout-summary__pay"
+                        disabled={busy || missingPlayerIds.length > 0}
+                        type="button"
+                        onClick={handlePay}
+                    >
                         {busy ? t("checkout.redirecting") : t("checkout.payWithCard")}
                     </button>
 

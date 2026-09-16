@@ -1,6 +1,7 @@
 package com.example.gamesphere.controller;
 
 import com.example.gamesphere.dto.request.AddCartItemRequest;
+import com.example.gamesphere.dto.request.UpdateCartItemPlayerRequest;
 import com.example.gamesphere.dto.response.ApiResponse;
 import com.example.gamesphere.dto.response.CartResponse;
 import com.example.gamesphere.service.CartService;
@@ -39,6 +40,20 @@ public class CartController {
 
         return ResponseEntity.ok(
                 ApiResponse.success("Product added to cart", cart)
+        );
+    }
+
+    @PatchMapping("/items/{productId}/player-account")
+    @Operation(summary = "Set the player account id of a cart item",
+            description = "Fills in the in-game id a top-up needs, without changing its quantity.")
+    public ResponseEntity<ApiResponse<CartResponse>> updatePlayerAccount(
+            @PathVariable Long productId,
+            @Valid @RequestBody UpdateCartItemPlayerRequest request) {
+
+        CartResponse cart = cartService.updatePlayerAccountId(productId, request.getPlayerAccountId());
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Player account updated", cart)
         );
     }
 

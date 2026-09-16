@@ -22,6 +22,8 @@ public interface CartMapper {
     @Mapping(target = "productName", source = "product.name")
     @Mapping(target = "price", source = "priceAtAddTime")
     @Mapping(target = "currency", source = "product.currency")
+    @Mapping(target = "requiresPlayerId", source = "product.requiresPlayerId")
+    @Mapping(target = "playerIdLabel", source = "product.playerIdLabel")
     CartItemResponse toCartItemResponse(CartItem cartItem);
 
     /** Currency of the cart total, taken from the first item a cart holds. */

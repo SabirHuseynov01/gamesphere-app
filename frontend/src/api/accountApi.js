@@ -34,6 +34,12 @@ export async function addCartItem(productId, quantity = 1, playerAccountId) {
     return response.data.data;
 }
 
+/** Fills in the in-game id of a row already in the cart, leaving quantity alone. */
+export async function setCartItemPlayerId(productId, playerAccountId) {
+    const response = await httpClient.patch(`/cart/items/${productId}/player-account`, { playerAccountId });
+    return response.data.data;
+}
+
 export async function removeCartItem(productId) {
     const response = await httpClient.delete(`/cart/items/${productId}`);
     return response.data.data;

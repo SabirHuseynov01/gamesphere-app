@@ -128,6 +128,10 @@ export function AccountProvider({ children }) {
         setCart(toCart(await accountApi.addCartItem(productId, 1, playerAccountId)));
     }, []);
 
+    const setCartPlayerId = useCallback(async (productId, playerAccountId) => {
+        setCart(toCart(await accountApi.setCartItemPlayerId(productId, playerAccountId)));
+    }, []);
+
     const removeFromCart = useCallback(async (productId) => {
         setCart(toCart(await accountApi.removeCartItem(productId)));
     }, []);
@@ -154,9 +158,10 @@ export function AccountProvider({ children }) {
         signOut,
         addToCart,
         removeFromCart,
+        setCartPlayerId,
         toggleWishlist,
         getApiErrorMessage,
-    }), [addToCart, basketsLoading, cart, createAccount, removeFromCart, signIn, signOut, toggleWishlist, user, wishlist]);
+    }), [addToCart, basketsLoading, cart, createAccount, removeFromCart, setCartPlayerId, signIn, signOut, toggleWishlist, user, wishlist]);
 
     return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }
