@@ -169,6 +169,9 @@ export default function AccountPage() {
     // Nothing is fetched while signed out, so the page starts settled in that case.
     const [loading, setLoading] = useState(isAuthenticated);
     const [error, setError] = useState("");
+    // A panel whose own request failed must say so. Leaving it at an empty list
+    // renders "nothing here yet", which reads as an answer rather than a failure.
+    const [panelErrors, setPanelErrors] = useState({ orders: "", notifications: "" });
 
     const active = SECTIONS.includes(section) ? section : "profile";
     const unread = notifications.filter((item) => item.status !== "READ").length;
@@ -191,6 +194,13 @@ export default function AccountPage() {
 
                 if (ordersResult.status === "fulfilled") setOrders(ordersResult.value);
                 if (notificationsResult.status === "fulfilled") setNotifications(notificationsResult.value);
+
+                setPanelErrors({
+                    orders: ordersResult.status === "rejected" ? getApiErrorMessage(ordersResult.reason) : "",
+                    notifications: notificationsResult.status === "rejected"
+                        ? getApiErrorMessage(notificationsResult.reason)
+                        : "",
+                });
             })
             .finally(() => {
                 if (!controller.signal.aborted) setLoading(false);
@@ -253,7 +263,9 @@ export default function AccountPage() {
                                 <span>{orders.length}</span>
                             </header>
 
-                            {orders.length === 0
+                            {panelErrors.orders
+                                ? <div className="account-empty is-error">{panelErrors.orders}</div>
+                                : orders.length === 0
                                 ? <div className="account-empty">{t("account.noOrders")}</div>
                                 : (
                                     <ul className="account-rows">
@@ -313,7 +325,9 @@ export default function AccountPage() {
                                 <span>{t("account.unread", { count: unread })}</span>
                             </header>
 
-                            {notifications.length === 0
+                            {panelErrors.notifications
+                                ? <div className="account-empty is-error">{panelErrors.notifications}</div>
+                                : notifications.length === 0
                                 ? <div className="account-empty">{t("account.noNotifications")}</div>
                                 : (
                                     <ul className="account-rows">
