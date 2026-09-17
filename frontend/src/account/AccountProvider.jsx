@@ -2,37 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import * as accountApi from "../api/accountApi.js";
 import { getApiErrorMessage } from "../api/httpClient.js";
-
-const ACCESS_TOKEN_KEY = "accessToken";
-const REFRESH_TOKEN_KEY = "gamesphere-refresh-token";
-const USER_KEY = "gamesphere-user";
+import {
+    clearSession,
+    readRefreshToken,
+    readStoredUser,
+    SESSION_EXPIRED_EVENT,
+    storeSession,
+} from "../api/session.js";
 
 const AccountContext = createContext(null);
-
-function readStoredUser() {
-    try {
-        const raw = window.localStorage.getItem(USER_KEY);
-        return raw ? JSON.parse(raw) : null;
-    } catch {
-        return null;
-    }
-}
-
-function storeSession(auth) {
-    const user = { username: auth.username, email: auth.email };
-
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, auth.accessToken);
-    window.localStorage.setItem(REFRESH_TOKEN_KEY, auth.refreshToken || "");
-    window.localStorage.setItem(USER_KEY, JSON.stringify(user));
-
-    return user;
-}
-
-function clearSession() {
-    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-    window.localStorage.removeItem(USER_KEY);
-}
 
 const emptyCart = { items: [], totalAmount: 0, currency: null };
 
@@ -53,7 +31,7 @@ export function AccountProvider({ children }) {
     const [basketsLoading, setBasketsLoading] = useState(() => Boolean(readStoredUser()));
 
     const signOut = useCallback(async () => {
-        const refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
+        const refreshToken = readRefreshToken();
 
         try {
             await accountApi.logout(refreshToken);
@@ -87,8 +65,8 @@ export function AccountProvider({ children }) {
             setWishlist(wishlistResult.value?.products || []);
         }
 
-        // A stored token that the backend no longer accepts means the session is
-        // gone; drop it rather than rendering a signed-in header that cannot load.
+        // The client already retried these with a refreshed token, so a 401 that
+        // still lands here means the refresh failed too: the session is over.
         const rejected = [cartResult, wishlistResult].find((result) => result.status === "rejected");
         if (rejected?.reason?.response?.status === 401) {
             clearSession();
@@ -96,6 +74,20 @@ export function AccountProvider({ children }) {
             setCart(emptyCart);
             setWishlist([]);
         }
+    }, []);
+
+    // An access token lives 15 minutes. The client renews it silently, but once
+    // the refresh token is rejected too the header must stop claiming a session.
+    useEffect(() => {
+        function handleExpiry() {
+            setUser(null);
+            setCart(emptyCart);
+            setWishlist([]);
+            setBasketsLoading(false);
+        }
+
+        window.addEventListener(SESSION_EXPIRED_EVENT, handleExpiry);
+        return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleExpiry);
     }, []);
 
     useEffect(() => {
