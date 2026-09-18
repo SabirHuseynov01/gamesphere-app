@@ -42,7 +42,9 @@ class LiquibaseChangelogTest {
                             "016-prevent-duplicate-edition-offers",
                             "017-restore-non-stock-managed-offers",
                             "018-add-game-reviews",
-                            "019-add-product-discount-window");
+                            "019-add-product-discount-window",
+                            "020-fill-product-catalog-section",
+                            "021-add-top-up-game-catalog-and-edition-name");
         }
     }
 }

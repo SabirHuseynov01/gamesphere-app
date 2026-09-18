@@ -65,6 +65,10 @@ class ProductServiceTest extends ServiceTestSupport {
         product.setPlatform(request.getPlatform());
         product.setPrice(request.getPrice());
         product.setStockQuantity(request.getStockQuantity());
+        // The real mapper copies these across; without them the entity looks
+        // like a redirect offer with no store and validation rejects it.
+        product.setStoreName(request.getStoreName());
+        product.setStoreUrl(request.getStoreUrl());
         ProductResponse expected = new ProductResponse();
 
         when(userRepository.findByEmail("seller@mail.com")).thenReturn(Optional.of(seller));
@@ -121,7 +125,7 @@ class ProductServiceTest extends ServiceTestSupport {
         when(productMapper.toEntity(standardRequest)).thenReturn(standard);
         when(productRepository.findByGameIdAndPlatformAndStoreNameIgnoreCaseAndEditionNameIgnoreCaseAndIsDeletedFalse(
                 7L, Platform.PC, "Steam", "Standard Edition")).thenReturn(Optional.empty());
-        when(slugGenerator.generate("Assassin's Creed Shadows Standard Edition-Standard Edition-PC"))
+        when(slugGenerator.generate("Assassin's Creed Shadows Standard Edition-PC"))
                 .thenReturn("assassins-creed-shadows-standard-edition-pc");
         when(productRepository.existsBySlug("assassins-creed-shadows-standard-edition-pc")).thenReturn(false);
         when(productRepository.save(standard)).thenReturn(standard);

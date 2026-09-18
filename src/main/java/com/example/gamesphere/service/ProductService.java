@@ -69,6 +69,7 @@ public class ProductService {
         applyAggregatorDefaults(product);
         applyDeliveryDefaults(product);
         validateDigitalOfferMetadata(product);
+        rejectDuplicateEditionOffer(product, null);
         discountCalculator.validateDiscount(product.getPrice(), product.getDiscountPrice());
 
         Product savedProduct = productRepository.save(product);
@@ -111,6 +112,7 @@ public class ProductService {
         applyAggregatorDefaults(product);
         applyDeliveryDefaults(product);
         validateDigitalOfferMetadata(product);
+        rejectDuplicateEditionOffer(product, product.getId());
         product.setLastCheckedAt(LocalDateTime.now());
         discountCalculator.validateDiscount(product.getPrice(), product.getDiscountPrice());
         Product updatedProduct = productRepository.save(product);
@@ -187,6 +189,37 @@ public class ProductService {
             }
 
         }
+    }
+
+    /**
+     * The database carries a partial unique index over
+     * (game, platform, store, edition) — changeset 016. Without this check a
+     * second offer for the same edition reaches the insert and comes back as a
+     * constraint violation, which the handler can only answer with a 500.
+     * Catching it here turns that into a 400 that says what is wrong.
+     *
+     * @param selfId id of the product being updated, or null when creating.
+     */
+    private void rejectDuplicateEditionOffer(Product product, Long selfId) {
+        if (product.getGame() == null
+                || product.getPlatform() == null
+                || product.getEditionName() == null || product.getEditionName().isBlank()
+                || product.getStoreName() == null || product.getStoreName().isBlank()) {
+            return;
+        }
+
+        productRepository
+                .findByGameIdAndPlatformAndStoreNameIgnoreCaseAndEditionNameIgnoreCaseAndIsDeletedFalse(
+                        product.getGame().getId(),
+                        product.getPlatform(),
+                        product.getStoreName(),
+                        product.getEditionName())
+                .filter(existing -> selfId == null || !selfId.equals(existing.getId()))
+                .ifPresent(existing -> {
+                    throw new BusinessException(
+                            "A " + product.getEditionName() + " edition offer already exists for "
+                                    + product.getStoreName() + " on " + product.getPlatform() + ".");
+                });
     }
 
     private void validateDigitalOfferMetadata(Product product) {

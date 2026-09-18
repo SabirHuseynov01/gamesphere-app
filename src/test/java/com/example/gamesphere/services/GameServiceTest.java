@@ -65,7 +65,7 @@ class GameServiceTest extends ServiceTestSupport {
         Product pc = offer(10L, Platform.PC, "59.99");
         Product xbox = offer(11L, Platform.XBOX, "69.99");
         GameOfferCriteria criteria = new GameOfferCriteria();
-        when(gameRepository.findBySlug("battlefield-6")).thenReturn(Optional.of(game));
+        when(gameRepository.findBySlugAndIsDeletedFalse("battlefield-6")).thenReturn(Optional.of(game));
         when(gameQueryService.findOffers(1L, criteria)).thenReturn(List.of(pc, xbox));
         when(discountCalculator.finalPrice(pc.getPrice(), pc.getDiscountPrice()))
                 .thenReturn(new BigDecimal("49.99"));
