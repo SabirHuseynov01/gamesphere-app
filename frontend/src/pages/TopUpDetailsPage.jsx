@@ -1,4 +1,4 @@
-import { ArrowLeft, Gamepad2, ShoppingCart } from "lucide-react";
+import { ArrowLeft, ArrowRight, Gamepad2, ShoppingCart } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
@@ -148,7 +148,17 @@ export default function TopUpDetailsPage() {
                             </label>
                         )}
 
-                        {message && <div className="status-panel status-panel--inline status-panel--success">{message}</div>}
+                        {message && (
+                            <div className="status-panel status-panel--inline status-panel--success top-up-added">
+                                <span>{message}</span>
+                                {/* Paying is the next thing a shopper wants, and the cart
+                                    dropdown is the only other way to reach it. */}
+                                <Link to="/checkout">
+                                    {t("cart.checkout")}
+                                    <ArrowRight size={16} />
+                                </Link>
+                            </div>
+                        )}
                         {error && <div className="status-panel status-panel--inline status-panel--error">{error}</div>}
 
                         <section className="top-up-package-grid" aria-label={`${title} ${t("common.packages")}`}>
