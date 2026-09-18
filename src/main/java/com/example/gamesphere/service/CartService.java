@@ -189,4 +189,3 @@ public class CartService {
         return normalizedId == null || normalizedId.isBlank() ? null : normalizedId;
     }
 }
-

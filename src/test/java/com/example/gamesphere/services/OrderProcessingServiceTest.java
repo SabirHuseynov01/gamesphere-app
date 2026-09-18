@@ -138,5 +138,3 @@ class OrderProcessingServiceTest extends ServiceTestSupport {
         assertThat(product.getStockQuantity()).isEqualTo(9);
     }
 }
-
-

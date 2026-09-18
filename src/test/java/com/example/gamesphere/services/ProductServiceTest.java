@@ -1,6 +1,7 @@
 package com.example.gamesphere.services;
 
 import com.example.gamesphere.dto.request.ProductCreateRequest;
+import com.example.gamesphere.dto.request.ProductUpdateRequest;
 import com.example.gamesphere.dto.response.ProductResponse;
 import com.example.gamesphere.entity.Game;
 import com.example.gamesphere.entity.Category;
@@ -8,6 +9,8 @@ import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.entity.SellerProfile;
 import com.example.gamesphere.entity.User;
 import com.example.gamesphere.enums.Platform;
+import com.example.gamesphere.enums.CatalogSection;
+import com.example.gamesphere.enums.DeliveryType;
 import com.example.gamesphere.enums.ProductStatus;
 import com.example.gamesphere.enums.ProductType;
 import com.example.gamesphere.exception.BusinessException;
@@ -22,6 +25,9 @@ import com.example.gamesphere.util.DiscountCalculator;
 import com.example.gamesphere.util.SlugGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest extends ServiceTestSupport {
@@ -65,8 +72,6 @@ class ProductServiceTest extends ServiceTestSupport {
         product.setPlatform(request.getPlatform());
         product.setPrice(request.getPrice());
         product.setStockQuantity(request.getStockQuantity());
-        // The real mapper copies these across; without them the entity looks
-        // like a redirect offer with no store and validation rejects it.
         product.setStoreName(request.getStoreName());
         product.setStoreUrl(request.getStoreUrl());
         ProductResponse expected = new ProductResponse();
@@ -101,6 +106,70 @@ class ProductServiceTest extends ServiceTestSupport {
         assertThatThrownBy(() -> productService.createProduct(request()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("not been approved");
+    }
+
+    @Test
+    void adminCanCreatePaidRedirectGameWithoutSellerProfile() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin@mail.com", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        User admin = user(9L, "admin@mail.com");
+        Game game = withId(Game.builder().title("The Witcher 3").slug("the-witcher-3").build(), 11L);
+        ProductCreateRequest request = request();
+        request.setName("The Witcher 3 Complete Edition - Steam");
+        request.setGameId(11L);
+        request.setProductType(ProductType.GAME);
+        request.setCatalogSection(com.example.gamesphere.enums.CatalogSection.MARKETPLACE);
+        request.setDeliveryType(com.example.gamesphere.enums.DeliveryType.STORE_REDIRECT);
+        Product product = new Product();
+        product.setName(request.getName());
+        product.setPlatform(request.getPlatform());
+        product.setPrice(request.getPrice());
+        product.setStockQuantity(request.getStockQuantity());
+        product.setStoreName(request.getStoreName());
+        product.setStoreUrl(request.getStoreUrl());
+        ProductResponse expected = new ProductResponse();
+
+        when(userRepository.findByEmail("admin@mail.com")).thenReturn(Optional.of(admin));
+        when(productMapper.toEntity(request)).thenReturn(product);
+        when(gameRepository.findById(11L)).thenReturn(Optional.of(game));
+        when(slugGenerator.generate("The Witcher 3 Complete Edition - Steam-PC"))
+                .thenReturn("the-witcher-3-complete-edition-steam-pc");
+        when(productRepository.existsBySlug("the-witcher-3-complete-edition-steam-pc")).thenReturn(false);
+        when(productRepository.save(product)).thenReturn(product);
+        when(productMapper.toResponse(product)).thenReturn(expected);
+
+        assertThat(productService.createProduct(request)).isSameAs(expected);
+        assertThat(product.getSeller()).isSameAs(admin);
+        verify(sellerProfileRepository, never()).findByUserId(admin.getId());
+    }
+
+    @Test
+    void adminCanUpdatePaidRedirectGameWithoutSellerProfile() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin@mail.com", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        User admin = user(9L, "admin@mail.com");
+        Product product = withId(new Product(), 15L);
+        product.setName("The Witcher 3 Complete Edition - Steam");
+        product.setPlatform(Platform.PC);
+        product.setPrice(new BigDecimal("49.99"));
+        product.setStockQuantity(5);
+        product.setStatus(ProductStatus.ACTIVE);
+        product.setProductType(ProductType.GAME);
+        product.setCatalogSection(CatalogSection.MARKETPLACE);
+        product.setDeliveryType(DeliveryType.STORE_REDIRECT);
+        product.setStoreName("Steam");
+        product.setStoreUrl("https://store.steampowered.com/");
+        ProductUpdateRequest request = new ProductUpdateRequest();
+        request.setDescription("Updated description");
+        ProductResponse expected = new ProductResponse();
+
+        when(productRepository.findById(15L)).thenReturn(Optional.of(product));
+        when(userRepository.findByEmail("admin@mail.com")).thenReturn(Optional.of(admin));
+        when(productRepository.save(product)).thenReturn(product);
+        when(productMapper.toResponse(product)).thenReturn(expected);
+
+        assertThat(productService.updateProduct(15L, request)).isSameAs(expected);
+        verify(sellerProfileRepository, never()).findByUserId(admin.getId());
     }
 
     @Test
@@ -180,3 +249,4 @@ class ProductServiceTest extends ServiceTestSupport {
         return request;
     }
 }
+

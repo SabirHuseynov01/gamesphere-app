@@ -1,6 +1,5 @@
 package com.example.gamesphere.service;
 
-
 import com.example.gamesphere.dto.request.ProductCreateRequest;
 import com.example.gamesphere.dto.request.ProductUpdateRequest;
 import com.example.gamesphere.dto.response.ProductResponse;
@@ -53,7 +52,7 @@ public class ProductService {
     public ProductResponse createProduct(ProductCreateRequest request) {
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        User seller = getApprovedSeller(currentEmail);
+        User seller = resolveProductOwner(currentEmail, request);
 
         Product product = productMapper.toEntity(request);
         product.setSeller(seller);
@@ -82,11 +81,16 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
-        // Ownership check
         String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        User seller = getApprovedSeller(currentEmail);
-        if (product.getSeller() == null || !product.getSeller().getId().equals(seller.getId())) {
-            throw new BusinessException("You can only update your own products.");
+        User currentUser = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        boolean admin = isAdmin();
+
+        if (!admin) {
+            User seller = getApprovedSeller(currentUser);
+            if (product.getSeller() == null || !product.getSeller().getId().equals(seller.getId())) {
+                throw new BusinessException("You can only update your own products.");
+            }
         }
 
         productMapper.updateEntity(product, request);
@@ -111,6 +115,11 @@ public class ProductService {
         }
         applyAggregatorDefaults(product);
         applyDeliveryDefaults(product);
+
+        if (admin && !isAdminManagedPaidRedirectGame(product)) {
+            throw new BusinessException("Admins can update only GAME marketplace store redirect products.");
+        }
+
         validateDigitalOfferMetadata(product);
         rejectDuplicateEditionOffer(product, product.getId());
         product.setLastCheckedAt(LocalDateTime.now());
@@ -135,10 +144,18 @@ public class ProductService {
         return generateUniqueSlug(name, platform, null);
     }
 
-    private User getApprovedSeller(String email) {
-        User seller = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Seller not found"));
+    private User resolveProductOwner(String email, ProductCreateRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        if (isAdmin() && isAdminManagedPaidRedirectGame(request)) {
+            return user;
+        }
+
+        return getApprovedSeller(user);
+    }
+
+    private User getApprovedSeller(User seller) {
         SellerProfile sellerProfile = sellerProfileRepository.findByUserId(seller.getId())
                 .orElseThrow(() -> new BusinessException(
                         "Seller profile not found. Please create a seller profile first."));
@@ -148,6 +165,31 @@ public class ProductService {
         }
 
         return seller;
+    }
+
+    private boolean isAdmin() {
+        return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    }
+
+    private boolean isAdminManagedPaidRedirectGame(ProductCreateRequest request) {
+        ProductType productType = request.getProductType() != null ? request.getProductType() : ProductType.GAME;
+        CatalogSection catalogSection = request.getCatalogSection() != null
+                ? request.getCatalogSection()
+                : defaultCatalogSection(productType);
+        DeliveryType deliveryType = request.getDeliveryType() != null
+                ? request.getDeliveryType()
+                : DeliveryType.STORE_REDIRECT;
+
+        return productType == ProductType.GAME
+                && catalogSection == CatalogSection.MARKETPLACE
+                && deliveryType == DeliveryType.STORE_REDIRECT;
+    }
+
+    private boolean isAdminManagedPaidRedirectGame(Product product) {
+        return product.getProductType() == ProductType.GAME
+                && product.getCatalogSection() == CatalogSection.MARKETPLACE
+                && product.getDeliveryType() == DeliveryType.STORE_REDIRECT;
     }
 
     private void applyAggregatorDefaults(Product product) {

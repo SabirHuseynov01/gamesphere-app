@@ -4,6 +4,7 @@ public enum GameGenre {
 
     ACTION,
     ADVENTURE,
+    OPEN_WORLD,
     FPS,
     RPG,
     RACING,
@@ -15,5 +16,6 @@ public enum GameGenre {
     SIMULATION,
     PUZZLE,
     FIGHTING,
-    PLATFORMER
+    PLATFORMER,
+    MOBA
 }

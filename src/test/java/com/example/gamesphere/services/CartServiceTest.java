@@ -277,4 +277,3 @@ class CartServiceTest extends ServiceTestSupport {
         return product;
     }
 }
-
