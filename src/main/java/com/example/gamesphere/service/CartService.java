@@ -107,6 +107,41 @@ public class CartService {
         return cartMapper.toResponse(cartRepository.save(cart));
     }
 
+    /**
+     * Sets the player account id on a row that is already in the cart.
+     *
+     * A top-up can be added before the shopper knows their in-game id, so the
+     * id has to be fillable later — re-adding the product would bump the
+     * quantity instead, and the order is refused while the id is missing.
+     */
+    @Transactional
+    public CartResponse updatePlayerAccountId(Long productId, String playerAccountId) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
+
+        CartItem item = cart.getCartItems().stream()
+                .filter(cartItem -> cartItem.getProduct().getId().equals(productId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Product is not in the cart"));
+
+        if (!item.getProduct().isRequiresPlayerId()) {
+            throw new BusinessException(item.getProduct().getName() + " does not take a player account id.");
+        }
+
+        String normalizedId = playerAccountId == null ? null : playerAccountId.trim();
+        if (normalizedId == null || normalizedId.isBlank()) {
+            throw new BusinessException("Player account id cannot be empty.");
+        }
+
+        item.setPlayerAccountId(normalizedId);
+
+        return cartMapper.toResponse(cartRepository.save(cart));
+    }
+
     @Transactional
     public CartResponse removeFromCart(Long productId) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
