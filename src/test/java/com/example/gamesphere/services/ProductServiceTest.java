@@ -172,6 +172,70 @@ class ProductServiceTest extends ServiceTestSupport {
         verify(sellerProfileRepository, never()).findByUserId(admin.getId());
     }
 
+    @Test
+    void sameGameCanKeepDifferentEditionsButRejectsSameEditionOffer() {
+        authenticate("seller@mail.com");
+        User seller = user(2L, "seller@mail.com");
+        seller.setSeller(true);
+        SellerProfile profile = new SellerProfile();
+        profile.setApproved(true);
+        Game game = withId(Game.builder().title("Assassin's Creed Shadows").slug("assassins-creed-shadows").build(), 7L);
+
+        ProductCreateRequest standardRequest = request();
+        standardRequest.setName("Assassin's Creed Shadows Standard Edition");
+        standardRequest.setEditionName("Standard Edition");
+        standardRequest.setProductType(ProductType.GAME);
+        standardRequest.setStoreName("Steam");
+
+        Product standard = product("Assassin's Creed Shadows Standard Edition", "Standard Edition", game);
+        when(userRepository.findByEmail("seller@mail.com")).thenReturn(Optional.of(seller));
+        when(sellerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(profile));
+        when(gameRepository.findById(7L)).thenReturn(Optional.of(game));
+        when(productMapper.toEntity(standardRequest)).thenReturn(standard);
+        when(productRepository.findByGameIdAndPlatformAndStoreNameIgnoreCaseAndEditionNameIgnoreCaseAndIsDeletedFalse(
+                7L, Platform.PC, "Steam", "Standard Edition")).thenReturn(Optional.empty());
+        when(slugGenerator.generate("Assassin's Creed Shadows Standard Edition-PC"))
+                .thenReturn("assassins-creed-shadows-standard-edition-pc");
+        when(productRepository.existsBySlug("assassins-creed-shadows-standard-edition-pc")).thenReturn(false);
+        when(productRepository.save(standard)).thenReturn(standard);
+        when(productMapper.toResponse(standard)).thenReturn(new ProductResponse());
+
+        productService.createProduct(standardRequest);
+
+        ProductCreateRequest duplicateRequest = new ProductCreateRequest();
+        duplicateRequest.setName("Assassin's Creed Shadows Standard Edition");
+        duplicateRequest.setEditionName("Standard Edition");
+        duplicateRequest.setGameId(7L);
+        duplicateRequest.setPrice(new BigDecimal("59.99"));
+        duplicateRequest.setStockQuantity(0);
+        duplicateRequest.setPlatform(Platform.PC);
+        duplicateRequest.setProductType(ProductType.GAME);
+        duplicateRequest.setStoreName("Steam");
+        duplicateRequest.setStoreUrl("https://store.steampowered.com/");
+        Product duplicate = product("Assassin's Creed Shadows Standard Edition", "Standard Edition", game);
+        when(productMapper.toEntity(duplicateRequest)).thenReturn(duplicate);
+        when(productRepository.findByGameIdAndPlatformAndStoreNameIgnoreCaseAndEditionNameIgnoreCaseAndIsDeletedFalse(
+                7L, Platform.PC, "Steam", "Standard Edition")).thenReturn(Optional.of(standard));
+
+        assertThatThrownBy(() -> productService.createProduct(duplicateRequest))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("edition offer already exists");
+        verify(productRepository, org.mockito.Mockito.times(1)).save(standard);
+    }
+
+    private Product product(String name, String editionName, Game game) {
+        Product product = new Product();
+        product.setName(name);
+        product.setEditionName(editionName);
+        product.setGame(game);
+        product.setPlatform(Platform.PC);
+        product.setStoreName("Steam");
+        product.setStoreUrl("https://store.steampowered.com/");
+        product.setPrice(new BigDecimal("59.99"));
+        product.setStockQuantity(0);
+        return product;
+    }
+
     private ProductCreateRequest request() {
         ProductCreateRequest request = new ProductCreateRequest();
         request.setName("2050 Valorant Points");

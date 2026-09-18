@@ -1,6 +1,8 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import AccountPage from "../pages/AccountPage.jsx";
+import CheckoutPage from "../pages/CheckoutPage.jsx";
+import PaymentResultPage from "../pages/PaymentResultPage.jsx";
 import MainLayout from "../layouts/MainLayout.jsx";
 import GameDetailsPage from "../pages/GameDetailsPage.jsx";
 import BrowseGamesPage from "../pages/BrowseGamesPage.jsx";
@@ -38,6 +40,18 @@ export const router = createBrowserRouter([
             {
                 path: "/top-ups/:slug",
                 element: <TopUpDetailsPage />,
+            },
+            {
+                path: "/checkout",
+                element: <CheckoutPage />,
+            },
+            {
+                path: "/payment/success",
+                element: <PaymentResultPage outcome="success" />,
+            },
+            {
+                path: "/payment/cancel",
+                element: <PaymentResultPage outcome="cancel" />,
             },
             {
                 path: "/account",

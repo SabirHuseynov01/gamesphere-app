@@ -4,6 +4,7 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./app/router.jsx";
 import { I18nProvider } from "./i18n/index.jsx";
 import { AccountProvider } from "./account/AccountProvider.jsx";
+import { CurrencyProvider } from "./money/CurrencyProvider.jsx";
 import "./styles/reset.css";
 import "./styles/variables.css";
 import "./styles/global.css";
@@ -11,9 +12,11 @@ import "./styles/global.css";
 createRoot(document.getElementById("root")).render(
     <StrictMode>
         <I18nProvider>
-            <AccountProvider>
-                <RouterProvider router={router} />
-            </AccountProvider>
+            <CurrencyProvider>
+                <AccountProvider>
+                    <RouterProvider router={router} />
+                </AccountProvider>
+            </CurrencyProvider>
         </I18nProvider>
     </StrictMode>,
 );

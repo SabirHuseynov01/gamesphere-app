@@ -1,4 +1,4 @@
-import { ArrowLeft, Gamepad2, ShoppingCart } from "lucide-react";
+import { ArrowLeft, ArrowRight, Gamepad2, ShoppingCart } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
@@ -6,7 +6,8 @@ import { getTopUpGames, getTopUpProducts } from "../api/topUpApi.js";
 import { useAccount } from "../account/AccountProvider.jsx";
 import { getApiErrorMessage } from "../api/httpClient.js";
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
-import { formatCurrency, formatPlatform } from "../utils/formatters.js";
+import { formatPlatform } from "../utils/formatters.js";
+import { useMoney } from "../money/CurrencyProvider.jsx";
 import { packageDenomination, packageTier, sortByPrice, toSlug } from "../utils/topUps.js";
 import { useTranslation } from "../i18n/index.jsx";
 import "../styles/top-ups.css";
@@ -14,6 +15,7 @@ import "../styles/top-ups.css";
 export default function TopUpDetailsPage() {
     const { t } = useTranslation();
     const { addToCart, isAuthenticated } = useAccount();
+    const { formatPrice } = useMoney();
     const { slug } = useParams();
     const { state } = useLocation();
     const [products, setProducts] = useState(state?.products || []);
@@ -146,7 +148,17 @@ export default function TopUpDetailsPage() {
                             </label>
                         )}
 
-                        {message && <div className="status-panel status-panel--inline status-panel--success">{message}</div>}
+                        {message && (
+                            <div className="status-panel status-panel--inline status-panel--success top-up-added">
+                                <span>{message}</span>
+                                {/* Paying is the next thing a shopper wants, and the cart
+                                    dropdown is the only other way to reach it. */}
+                                <Link to="/checkout">
+                                    {t("cart.checkout")}
+                                    <ArrowRight size={16} />
+                                </Link>
+                            </div>
+                        )}
                         {error && <div className="status-panel status-panel--inline status-panel--error">{error}</div>}
 
                         <section className="top-up-package-grid" aria-label={`${title} ${t("common.packages")}`}>
@@ -177,9 +189,9 @@ export default function TopUpDetailsPage() {
                                                     : t("topUps.noBonus")}
                                             </p>
                                             <div className="top-up-package__price">
-                                                <strong>{formatCurrency(product.finalPrice, product.currency || "USD")}</strong>
+                                                <strong>{formatPrice(product.finalPrice, product.currency)}</strong>
                                                 {discounted && (
-                                                    <s>{formatCurrency(product.price, product.currency || "USD")}</s>
+                                                    <s>{formatPrice(product.price, product.currency)}</s>
                                                 )}
                                             </div>
                                             <button

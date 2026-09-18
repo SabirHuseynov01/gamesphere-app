@@ -59,6 +59,9 @@ from entity scanning.
 <http://localhost:8080/swagger-ui.html> — every endpoint, grouped by
 controller, with request and response schemas.
 
+The raw OpenAPI document is at `/v3/api-docs` (`/v3/api-docs.yaml` for YAML).
+All of it is reachable without a token.
+
 ---
 
 ## Configuration

@@ -4,11 +4,12 @@ import { Link } from "react-router-dom";
 import HeaderMenu from "./HeaderMenu.jsx";
 import { useAccount } from "../../account/AccountProvider.jsx";
 import { useTranslation } from "../../i18n/index.jsx";
-import { formatMoney } from "../../utils/formatters.js";
+import { useMoney } from "../../money/CurrencyProvider.jsx";
 
 export default function CartMenu() {
     const { t } = useTranslation();
     const { cart, cartCount, isAuthenticated, removeFromCart } = useAccount();
+    const { formatPrice } = useMoney();
 
     return (
         <HeaderMenu
@@ -38,7 +39,7 @@ export default function CartMenu() {
                                             {item.playerAccountId && <small>{item.playerAccountId}</small>}
                                         </span>
                                         <span className="basket-menu__meta">
-                                            <strong>{formatMoney(item.price, item.currency || cart.currency)}</strong>
+                                            <strong>{formatPrice(item.price, item.currency || cart.currency)}</strong>
                                             <small>× {item.quantity}</small>
                                         </span>
                                         <button
@@ -56,9 +57,9 @@ export default function CartMenu() {
                             <footer className="basket-menu__footer">
                                 <span>
                                     {t("cart.total")}
-                                    <strong>{formatMoney(cart.totalAmount, cart.currency)}</strong>
+                                    <strong>{formatPrice(cart.totalAmount, cart.currency)}</strong>
                                 </span>
-                                <Link to="/account/orders" onClick={close}>{t("cart.checkout")}</Link>
+                                <Link to="/checkout" onClick={close}>{t("cart.checkout")}</Link>
                             </footer>
                         </>
                     )}

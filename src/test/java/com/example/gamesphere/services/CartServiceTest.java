@@ -8,6 +8,7 @@ import com.example.gamesphere.entity.Product;
 import com.example.gamesphere.entity.User;
 import com.example.gamesphere.enums.DeliveryType;
 import com.example.gamesphere.exception.BusinessException;
+import com.example.gamesphere.exception.ResourceNotFoundException;
 import com.example.gamesphere.mapper.CartMapper;
 import com.example.gamesphere.repository.CartRepository;
 import com.example.gamesphere.repository.ProductRepository;
@@ -182,6 +183,87 @@ class CartServiceTest extends ServiceTestSupport {
         assertThat(cartService.addToCart(request)).isSameAs(expected);
         assertThat(cart.getCartItems()).singleElement().satisfies(item ->
                 assertThat(item.getPlayerAccountId()).isEqualTo("Sabir#AZE"));
+    }
+
+    @Test
+    void playerAccountIdCanBeFilledInAfterTheItemIsAlreadyInTheCart() {
+        authenticate("user@mail.com");
+        User user = user(1L, "user@mail.com");
+        Product product = product(10L, true, 5);
+        product.setDeliveryType(DeliveryType.PLAYER_ID_TOP_UP);
+        product.setRequiresPlayerId(true);
+        Cart cart = cartHolding(user, product, 3, null);
+        CartResponse expected = new CartResponse();
+
+        when(userRepository.findByEmail("user@mail.com")).thenReturn(Optional.of(user));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+        when(cartRepository.save(cart)).thenReturn(cart);
+        when(cartMapper.toResponse(cart)).thenReturn(expected);
+
+        assertThat(cartService.updatePlayerAccountId(10L, "  5606020504  ")).isSameAs(expected);
+        assertThat(cart.getCartItems()).singleElement().satisfies(item -> {
+            assertThat(item.getPlayerAccountId()).isEqualTo("5606020504");
+            // Filling the id in must not be mistaken for adding the product again.
+            assertThat(item.getQuantity()).isEqualTo(3);
+        });
+    }
+
+    @Test
+    void blankPlayerAccountIdIsRefused() {
+        authenticate("user@mail.com");
+        User user = user(1L, "user@mail.com");
+        Product product = product(10L, true, 5);
+        product.setRequiresPlayerId(true);
+        Cart cart = cartHolding(user, product, 1, null);
+
+        when(userRepository.findByEmail("user@mail.com")).thenReturn(Optional.of(user));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+
+        assertThatThrownBy(() -> cartService.updatePlayerAccountId(10L, "   "))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Player account id cannot be empty.");
+    }
+
+    @Test
+    void aProductThatTakesNoPlayerIdRefusesOne() {
+        authenticate("user@mail.com");
+        User user = user(1L, "user@mail.com");
+        Cart cart = cartHolding(user, product(10L, true, 5), 1, null);
+
+        when(userRepository.findByEmail("user@mail.com")).thenReturn(Optional.of(user));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+
+        assertThatThrownBy(() -> cartService.updatePlayerAccountId(10L, "5606020504"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("Game key does not take a player account id.");
+    }
+
+    @Test
+    void aProductMissingFromTheCartCannotTakeAPlayerId() {
+        authenticate("user@mail.com");
+        User user = user(1L, "user@mail.com");
+        Cart cart = new Cart();
+        cart.setUser(user);
+
+        when(userRepository.findByEmail("user@mail.com")).thenReturn(Optional.of(user));
+        when(cartRepository.findByUserId(1L)).thenReturn(Optional.of(cart));
+
+        assertThatThrownBy(() -> cartService.updatePlayerAccountId(10L, "5606020504"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Product is not in the cart");
+    }
+
+    private Cart cartHolding(User user, Product product, int quantity, String playerAccountId) {
+        Cart cart = new Cart();
+        cart.setUser(user);
+        CartItem item = new CartItem();
+        item.setCart(cart);
+        item.setProduct(product);
+        item.setQuantity(quantity);
+        item.setPlayerAccountId(playerAccountId);
+        item.setPriceAtAddTime(product.getPrice());
+        cart.getCartItems().add(item);
+        return cart;
     }
 
     private Product product(Long id, boolean active, int stock) {
