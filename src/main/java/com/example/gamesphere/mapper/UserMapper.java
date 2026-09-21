@@ -3,6 +3,7 @@ package com.example.gamesphere.mapper;
 import com.example.gamesphere.dto.request.RegisterRequest;
 import com.example.gamesphere.dto.request.UserProfileUpdateRequest;
 import com.example.gamesphere.dto.response.UserProfileResponse;
+import com.example.gamesphere.entity.Role;
 import com.example.gamesphere.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -20,6 +21,11 @@ public interface UserMapper {
     User toEntity(RegisterRequest request);
 
     UserProfileResponse toProfileResponse(User user);
+
+    /** Lets MapStruct turn the user's Set<Role> into the plain names the UI reads. */
+    default String roleName(Role role) {
+        return role == null ? null : role.getName();
+    }
 
     void updateProfile(@MappingTarget User user, UserProfileUpdateRequest request);
 }

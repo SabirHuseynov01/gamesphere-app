@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
+import CheckoutBar from "../components/navigation/CheckoutBar.jsx";
 import Footer from "../components/navigation/Footer.jsx";
 import Header from "../components/navigation/Header.jsx";
 
@@ -14,6 +15,7 @@ export default function MainLayout() {
         else if (pathname.startsWith("/marketplace")) document.title = "Marketplace | GameSphere";
         else if (pathname.startsWith("/top-ups")) document.title = "Top-ups | GameSphere";
         else if (pathname.startsWith("/tournaments")) document.title = "Tournaments | GameSphere";
+        else if (pathname.startsWith("/admin")) document.title = "Admin | GameSphere";
         else document.title = "GameSphere";
     }, [pathname]);
 
@@ -24,6 +26,7 @@ export default function MainLayout() {
                 <Outlet />
             </main>
             <Footer />
+            <CheckoutBar />
         </div>
     );
 }

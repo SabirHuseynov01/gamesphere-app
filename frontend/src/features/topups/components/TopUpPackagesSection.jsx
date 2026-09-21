@@ -1,5 +1,6 @@
-import { ShoppingCart, X } from "lucide-react";
+import { ArrowRight, ShoppingCart, X } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useAccount } from "../../../account/AccountProvider.jsx";
 import { getApiErrorMessage } from "../../../api/httpClient.js";
@@ -57,7 +58,17 @@ export default function TopUpPackagesSection({ game, products }) {
                 <div><p className="game-details__eyebrow">{t("topUps.packageEyebrow")}</p><h2 id="top-up-packages-title">{t("topUps.packagesTitle")}</h2></div>
                 <span>{t("topUps.packageCount", { count: products.length })}</span>
             </div>
-            {message && <div className="status-panel status-panel--inline status-panel--success">{message}</div>}
+            {/* Paying is what a shopper wants next, and without this the only
+                route to it is the cart dropdown in the header. */}
+            {message && (
+                <div className="status-panel status-panel--inline status-panel--success top-up-added">
+                    <span>{message}</span>
+                    <Link to="/checkout">
+                        {t("cart.checkout")}
+                        <ArrowRight size={16} />
+                    </Link>
+                </div>
+            )}
             {error && <div className="status-panel status-panel--inline status-panel--error">{error}</div>}
             <div className="top-up-package-grid">{products.map((product) => {
                 const imageUrl = productImage(product, game);

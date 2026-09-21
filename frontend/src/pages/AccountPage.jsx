@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, BadgeCheck, Heart, LogOut, Receipt, UserRound, Wallet } from "lucide-react";
+import { Bell, BadgeCheck, Gift, Heart, Library, LogOut, Receipt, Store, UserRound, Wallet } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
 import {
@@ -11,12 +11,15 @@ import {
 } from "../api/accountApi.js";
 import { getApiErrorMessage } from "../api/httpClient.js";
 import { useAccount } from "../account/AccountProvider.jsx";
+import GiftsPanel from "../features/account/components/GiftsPanel.jsx";
+import LibraryPanel from "../features/account/components/LibraryPanel.jsx";
+import SellerPanel from "../features/account/components/SellerPanel.jsx";
 import { useTranslation } from "../i18n/index.jsx";
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
 import { formatDateTime, formatEnum, formatMoney } from "../utils/formatters.js";
 import "../styles/account.css";
 
-const SECTIONS = ["profile", "orders", "wishlist", "notifications"];
+const SECTIONS = ["profile", "orders", "library", "gifts", "wishlist", "notifications", "seller"];
 
 const emptyForm = { firstName: "", lastName: "", phoneNumber: "", address: "", avatarUrl: "" };
 
@@ -27,8 +30,11 @@ function AccountAside({ active, notificationCount, onSignOut, profile, t, user, 
     const links = [
         { key: "profile", to: "/account", icon: <UserRound size={17} />, label: t("account.dashboard") },
         { key: "orders", to: "/account/orders", icon: <Receipt size={17} />, label: t("account.orders"), count: orderCount },
+        { key: "library", to: "/account/library", icon: <Library size={17} />, label: t("library.title") },
+        { key: "gifts", to: "/account/gifts", icon: <Gift size={17} />, label: t("gifts.title") },
         { key: "wishlist", to: "/account/wishlist", icon: <Heart size={17} />, label: t("nav.wishlist"), count: wishlistCount },
         { key: "notifications", to: "/account/notifications", icon: <Bell size={17} />, label: t("account.notifications"), count: notificationCount },
+        { key: "seller", to: "/account/seller", icon: <Store size={17} />, label: t("seller.title") },
     ];
 
     return (
@@ -282,6 +288,14 @@ export default function AccountPage() {
                                     </ul>
                                 )}
                         </>
+                    )}
+
+                    {!loading && !error && active === "library" && <LibraryPanel t={t} />}
+
+                    {!loading && !error && active === "gifts" && <GiftsPanel t={t} />}
+
+                    {!loading && !error && active === "seller" && (
+                        <SellerPanel email={profile?.email} t={t} />
                     )}
 
                     {!loading && !error && active === "wishlist" && (
