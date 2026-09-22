@@ -2,6 +2,7 @@ import {
     Coins,
     Gamepad2,
     Globe2,
+    ShieldCheck,
     ShoppingBag,
     Search,
     Sparkles,
@@ -10,6 +11,7 @@ import {
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import AccountMenu from "./AccountMenu.jsx";
+import { useAccount } from "../../account/AccountProvider.jsx";
 import CartMenu from "./CartMenu.jsx";
 import WishlistMenu from "./WishlistMenu.jsx";
 import { useTranslation } from "../../i18n/index.jsx";
@@ -20,6 +22,7 @@ export default function Header() {
     const navigate = useNavigate();
     const [query, setQuery] = useState("");
     const { language, setLanguage, t } = useTranslation();
+    const { isAdmin } = useAccount();
     const { currencies, displayCurrency, setDisplayCurrency } = useMoney();
 
     function handleSearch(event) {
@@ -63,6 +66,14 @@ export default function Header() {
                         <Trophy size={16} />
                         {t("nav.tournaments")}
                     </NavLink>
+                    {/* Hidden from everyone else purely to keep the nav honest —
+                        the endpoints behind it are guarded server-side. */}
+                    {isAdmin && (
+                        <NavLink to="/admin">
+                            <ShieldCheck size={16} />
+                            {t("nav.admin")}
+                        </NavLink>
+                    )}
                 </nav>
 
                 <form className="header-search" onSubmit={handleSearch}>

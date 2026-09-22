@@ -14,6 +14,8 @@ const AccountContext = createContext(null);
 
 const emptyCart = { items: [], totalAmount: 0, currency: null };
 
+const ADMIN_ROLE = "ROLE_ADMIN";
+
 function toCart(response) {
     return {
         items: response?.items || [],
@@ -24,6 +26,9 @@ function toCart(response) {
 
 export function AccountProvider({ children }) {
     const [user, setUser] = useState(readStoredUser);
+    // The header decides which panels to offer from the profile's roles, so the
+    // profile is loaded once here instead of in every page that needs it.
+    const [profile, setProfile] = useState(null);
     const [cart, setCart] = useState(emptyCart);
     const [wishlist, setWishlist] = useState([]);
     // A signed-in visitor starts with empty baskets that are not yet loaded;
@@ -42,15 +47,17 @@ export function AccountProvider({ children }) {
 
         clearSession();
         setUser(null);
+        setProfile(null);
         setCart(emptyCart);
         setWishlist([]);
         setBasketsLoading(false);
     }, []);
 
     const refreshBaskets = useCallback(async (signal) => {
-        const [cartResult, wishlistResult] = await Promise.allSettled([
+        const [cartResult, wishlistResult, profileResult] = await Promise.allSettled([
             accountApi.getCart(signal),
             accountApi.getWishlist(signal),
+            accountApi.getProfile(signal),
         ]);
 
         if (signal?.aborted) return;
@@ -65,12 +72,17 @@ export function AccountProvider({ children }) {
             setWishlist(wishlistResult.value?.products || []);
         }
 
+        if (profileResult.status === "fulfilled") {
+            setProfile(profileResult.value);
+        }
+
         // The client already retried these with a refreshed token, so a 401 that
         // still lands here means the refresh failed too: the session is over.
         const rejected = [cartResult, wishlistResult].find((result) => result.status === "rejected");
         if (rejected?.reason?.response?.status === 401) {
             clearSession();
             setUser(null);
+            setProfile(null);
             setCart(emptyCart);
             setWishlist([]);
         }
@@ -81,6 +93,7 @@ export function AccountProvider({ children }) {
     useEffect(() => {
         function handleExpiry() {
             setUser(null);
+            setProfile(null);
             setCart(emptyCart);
             setWishlist([]);
             setBasketsLoading(false);
@@ -139,6 +152,13 @@ export function AccountProvider({ children }) {
 
     const value = useMemo(() => ({
         user,
+        profile,
+        setProfile,
+        roles: profile?.roles || [],
+        // UI gating only. Every admin endpoint is guarded by @PreAuthorize, so
+        // flipping this in the browser opens nothing.
+        isAdmin: Boolean(profile?.roles?.includes(ADMIN_ROLE)),
+        isSeller: Boolean(profile?.seller ?? profile?.isSeller),
         isAuthenticated: Boolean(user),
         basketsLoading,
         cart,
@@ -153,7 +173,7 @@ export function AccountProvider({ children }) {
         setCartPlayerId,
         toggleWishlist,
         getApiErrorMessage,
-    }), [addToCart, basketsLoading, cart, createAccount, removeFromCart, setCartPlayerId, signIn, signOut, toggleWishlist, user, wishlist]);
+    }), [addToCart, basketsLoading, cart, createAccount, profile, removeFromCart, setCartPlayerId, signIn, signOut, toggleWishlist, user, wishlist]);
 
     return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }
