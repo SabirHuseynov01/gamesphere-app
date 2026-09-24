@@ -15,7 +15,14 @@ import java.util.Optional;
 @Repository
 public interface TournamentParticipantRepository extends JpaRepository<TournamentParticipant, Long> {
 
-    List<TournamentParticipant> findByTournamentId(Long tournamentId);
+    /**
+     * Leaving keeps the row (tournament_id, user_id is unique, so a returning
+     * player reuses it); these read only the people still in the tournament.
+     */
+    List<TournamentParticipant> findByTournamentIdAndStatusNot(Long tournamentId, TournamentParticipantStatus status);
+
+    long countByTournamentIdAndStatusNot(Long tournamentId, TournamentParticipantStatus status);
+
     @Query("""
             select participant
             from TournamentParticipant participant
@@ -32,6 +39,4 @@ public interface TournamentParticipantRepository extends JpaRepository<Tournamen
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
     Optional<TournamentParticipant> findByTournamentIdAndUserId(Long tournamentId, Long userId);
-    boolean existsByTournamentIdAndUserId(Long tournamentId, Long userId);
-    long countByTournamentId(Long tournamentId);
 }

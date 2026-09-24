@@ -479,7 +479,13 @@ export default function TournamentsPage() {
                                     </div>
                                 </dl>
 
-                                <ParticipantList t={t} tournamentId={tournament.id} />
+                                {/* Keyed on the head count: a join or leave remounts the roster,
+                                    so an open list refetches instead of showing who left. */}
+                                <ParticipantList
+                                    key={`${tournament.id}-${tournament.currentParticipants}`}
+                                    t={t}
+                                    tournamentId={tournament.id}
+                                />
 
                                 <footer>
                                     {!isAuthenticated ? (
